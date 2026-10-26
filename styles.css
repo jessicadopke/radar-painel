@@ -1,0 +1,223 @@
+/* Radar — visual "Feira". Cores só como tokens; nada de cor solta nas telas. */
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 800; font-style: normal; font-display: swap; src: url("fonts/bricolage-grotesque-800.woff2") format("woff2"); }
+@font-face { font-family: "Nunito Sans"; font-weight: 400; font-style: normal; font-display: swap; src: url("fonts/nunito-sans-400.woff2") format("woff2"); }
+@font-face { font-family: "Nunito Sans"; font-weight: 700; font-style: normal; font-display: swap; src: url("fonts/nunito-sans-700.woff2") format("woff2"); }
+
+:root {
+  --bg: #F4F6F2;
+  --surface: #FFFFFF;
+  --fg: #1B2A21;
+  --muted: #5C6B61;
+  --line: #D5DDD6;
+  --brand: #1F5E3B;
+  --on-brand: #FFFFFF;
+  --good: #F2B705;
+  --on-good: #1B2A21;
+  --low: #CFE6D6;
+  --raio: 22px;
+  --fonte-titulo: "Bricolage Grotesque", system-ui, sans-serif;
+  --fonte-texto: "Nunito Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1A14;
+    --surface: #18271E;
+    --fg: #EAF2EC;
+    --muted: #A3B8AA;
+    --line: #2C4034;
+    --brand: #6FCB93;
+    --on-brand: #0F1A14;
+    --good: #F5C433;
+    --on-good: #1B2A21;
+    --low: #CFE6D6;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1A14;
+  --surface: #18271E;
+  --fg: #EAF2EC;
+  --muted: #A3B8AA;
+  --line: #2C4034;
+  --brand: #6FCB93;
+  --on-brand: #0F1A14;
+  --good: #F5C433;
+  --on-good: #1B2A21;
+  --low: #CFE6D6;
+}
+
+* { box-sizing: border-box; }
+html { color-scheme: light dark; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--fonte-texto);
+  font-size: 16px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) calc(72px + env(safe-area-inset-bottom)) env(safe-area-inset-left);
+}
+h1, h2 { font-family: var(--fonte-titulo); font-weight: 800; margin: 0; }
+h1 { font-size: 1.6rem; color: var(--brand); }
+h2 { font-size: 1.25rem; margin-bottom: 8px; }
+.muted { color: var(--muted); margin: 0; font-size: 0.9rem; }
+.topo { padding: 16px 16px 8px; }
+main { padding: 8px 16px 16px; max-width: 640px; margin: 0 auto; outline: none; }
+
+.cartao { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio); padding: 16px; margin-bottom: 12px; }
+.cartao p { margin: 0 0 8px; }
+.cartao p:last-child { margin-bottom: 0; }
+.aviso { background: var(--good); color: var(--on-good); border-radius: var(--raio); padding: 12px 16px; margin-bottom: 12px; font-weight: 700; }
+
+.botao {
+  min-height: 44px; min-width: 32px; padding: 0 20px;
+  border: 0; border-radius: 999px;
+  background: var(--brand); color: var(--on-brand);
+  font: 700 1rem var(--fonte-texto); cursor: pointer;
+}
+.botao[hidden] { display: none; }
+.botao.sec { background: transparent; color: var(--brand); border: 2px solid var(--brand); }
+.acoes { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+.abas {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.abas button {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 56px; min-width: 32px; padding: 6px 0;
+  background: none; border: 0; color: var(--muted);
+  font: 700 0.75rem var(--fonte-texto); cursor: pointer;
+}
+.abas button[aria-current="page"] { color: var(--brand); }
+.abas svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.abas button:focus-visible, .botao:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+h3 { font-family: var(--fonte-titulo); font-weight: 800; margin: 0 0 4px; font-size: 1.05rem; overflow-wrap: anywhere; }
+.subtitulo { margin: 16px 0 8px; color: var(--muted); font-size: 0.95rem; }
+.alerta {
+  display: flex; align-items: flex-start; gap: 12px; min-height: 44px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio);
+  padding: 12px; margin-bottom: 12px; color: var(--fg); text-decoration: none;
+}
+a.alerta:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.alerta .corpo { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.alerta p { margin: 0 0 4px; }
+.alerta .topo-alerta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--muted); }
+.selo-novo { background: var(--good); color: var(--on-good); border-radius: 999px; padding: 2px 10px; font-weight: 700; }
+.alerta .preco { font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.5rem; font-variant-numeric: tabular-nums; color: var(--brand); }
+.alerta img { width: 72px; height: 72px; flex: none; object-fit: cover; border-radius: var(--raio); border: 1px solid var(--line); }
+a.botao { display: inline-flex; align-items: center; text-decoration: none; }
+
+/* Tela Hoje */
+.busca {
+  display: block; width: 100%; min-height: 44px; padding: 0 16px; margin: 0 0 8px;
+  background: var(--surface); color: var(--fg); border: 2px solid var(--line); border-radius: 999px;
+  font: 400 1rem var(--fonte-texto);
+}
+.busca:focus-visible, .filtro:focus-visible, a.item-hoje:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.filtros { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; margin: 0 -2px; overscroll-behavior-x: contain; }
+.filtro {
+  flex: none; min-height: 44px; min-width: 44px; padding: 0 16px;
+  background: var(--surface); color: var(--fg); border: 2px solid var(--line); border-radius: 999px;
+  font: 700 0.95rem var(--fonte-texto); cursor: pointer; white-space: nowrap;
+}
+.filtro[aria-pressed="true"] { background: var(--brand); color: var(--on-brand); border-color: var(--brand); }
+.contagem { margin: 4px 0 12px; }
+.item-hoje {
+  display: block; min-height: 44px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio);
+  padding: 12px; margin-bottom: 12px; color: var(--fg); text-decoration: none;
+}
+.item-hoje .corpo { min-width: 0; overflow-wrap: anywhere; }
+.item-hoje p { margin: 0 0 4px; }
+.item-hoje .preco { font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.5rem; font-variant-numeric: tabular-nums; color: var(--brand); }
+.selo-alvo { background: var(--good); color: var(--on-good); border-radius: 999px; padding: 2px 10px; font-weight: 700; }
+
+/* Tela Produto */
+.voltar {
+  display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; margin-bottom: 4px;
+  color: var(--brand); font-weight: 700; text-decoration: none;
+}
+.voltar:focus-visible, .miniatura-botao:focus-visible, .foto-grande .botao:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.oferta-produto { display: flex; align-items: flex-start; gap: 12px; }
+.oferta-produto .corpo { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.oferta-produto p { margin: 0 0 4px; }
+.oferta-produto .preco { font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.5rem; font-variant-numeric: tabular-nums; color: var(--brand); }
+.cab-oferta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.cab-oferta h3 { margin: 0; }
+.selo-barato { background: var(--good); color: var(--on-good); border-radius: 999px; padding: 2px 10px; font-weight: 700; }
+.miniatura-botao {
+  flex: none; min-width: 72px; min-height: 72px; padding: 0; background: none; border: 0; border-radius: var(--raio); cursor: pointer;
+}
+.miniatura-botao img { display: block; width: 72px; height: 72px; object-fit: cover; border-radius: var(--raio); border: 1px solid var(--line); }
+.foto-grande {
+  box-sizing: border-box; width: 100%; max-width: 100%; height: 100%; max-height: 100%; margin: 0; padding: 12px; border: 0;
+  background: var(--bg); color: var(--fg); overflow: hidden; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+}
+.foto-grande[open], .foto-grande.aberta { display: flex; }
+div.foto-grande.aberta { position: fixed; inset: 0; z-index: 10; }
+.foto-grande::backdrop { background: var(--bg); }
+.foto-grande img { max-width: 100%; max-height: calc(100% - 120px); object-fit: contain; }
+.foto-grande .legenda-foto { margin: 0; text-align: center; overflow-wrap: anywhere; }
+
+.selo-fonte { border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; font-weight: 700; }
+.selo-fonte.erro, .selo-fonte.parada { background: var(--good); color: var(--on-good); border-color: transparent; }
+.fonte-erro, .fonte-parada { border-left: 6px solid var(--good); }
+.fonte-desligada { opacity: 0.8; }
+h4 { font-family: var(--fonte-titulo); font-weight: 800; font-size: 0.95rem; margin: 12px 0 4px; }
+.cartao ul { margin: 0; padding-left: 20px; }
+
+/* 360 px e sol forte: nada estoura a largura; texto quebra; bordas mais firmes com contraste alto */
+img, svg, video { max-width: 100%; }
+.cartao, .aviso, .botao { overflow-wrap: anywhere; }
+.abas button { min-width: 0; }
+@media (max-width: 360px) {
+  .topo { padding: 12px 12px 8px; }
+  main { padding: 8px 12px 16px; }
+  .alerta .preco, .item-hoje .preco, .oferta-produto .preco { font-size: 1.35rem; }
+}
+@media (prefers-contrast: more) {
+  :root, :root[data-theme] { --line: currentColor; }
+}
+
+/* Gráfico de preços (tela Produto) */
+.grafico-svg { display: block; width: 100%; height: auto; max-width: 100%; margin: 8px 0; }
+.grafico-grade { stroke: var(--line); stroke-width: 1; }
+.grafico-alvo { stroke: var(--fg); stroke-width: 1.5; }
+.grafico-rotulo { fill: var(--muted); font-size: 12.5px; font-variant-numeric: tabular-nums; stroke: none; }
+.grafico-rotulo-alvo { fill: var(--fg); font-weight: 700; }
+.grafico-legenda { list-style: none; margin: 0 0 8px; padding: 0; }
+.grafico-legenda li { display: flex; align-items: center; gap: 8px; margin: 4px 0; flex-wrap: wrap; }
+.grafico-amostra { width: 28px; height: 12px; flex: none; }
+.grafico-nome { color: var(--fg); }
+.grafico-valor { margin-left: auto; color: var(--fg); font-weight: 700; font-variant-numeric: tabular-nums; }
+.grafico-alvo-legenda { color: var(--muted); font-size: 0.9rem; }
+.grafico-tabela { margin-top: 8px; }
+.grafico-tabela summary { cursor: pointer; color: var(--brand); font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+.grafico-rolagem { overflow-x: auto; max-height: 20rem; overflow-y: auto; }
+.grafico-tabela table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.grafico-tabela th, .grafico-tabela td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--fg); white-space: nowrap; }
+.grafico-tabela thead th { color: var(--muted); }
+
+/* tela Lista de compras */
+.resultados-lista { margin-bottom: 12px; }
+.linha-busca { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 4px 0; border-bottom: 1px solid var(--line); }
+.linha-busca .nome, .item-lista .nome { min-width: 0; overflow-wrap: anywhere; flex: 1; }
+.item-lista { padding: 12px; }
+.item-lista p { margin: 0 0 4px; }
+.topo-item { display: flex; align-items: center; gap: 10px; min-height: 44px; font-weight: 700; }
+.topo-item .pego, .nome.pego { text-decoration: line-through; color: var(--muted); }
+.pego[type="checkbox"] { width: 28px; height: 28px; flex: none; accent-color: var(--brand); }
+.preco-item { margin: 0 0 4px; font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; color: var(--brand); }
+.qtd { display: flex; align-items: center; gap: 8px; }
+.qtd-valor { min-width: 2ch; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mini {
+  min-width: 44px; min-height: 44px; padding: 0 12px; background: transparent; color: var(--brand);
+  border: 2px solid var(--brand); border-radius: 999px; font: 700 1rem var(--fonte-texto); cursor: pointer;
+}
+.mini.remover { color: var(--fg); border-color: var(--line); }
+.mini:focus-visible, .pego:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
