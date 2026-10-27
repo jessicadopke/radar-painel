@@ -8,7 +8,7 @@ import { renderProduto } from "./produto.js";
 import { EXPLICACAO, NOME_TEMA, lerTema, gravarTema, proximoTema, lerChangelog } from "./sobre.js";
 import { renderInicio, lerVisitaAnterior, gravarVisita } from "./inicio.js";
 
-const VERSION = "0.9.0";
+const VERSION = "0.10.0";
 const PREFIXO_CACHE = "radar-";
 
 const $tela = document.getElementById("tela");
@@ -138,8 +138,16 @@ function telaHoje(raiz, ctx) {
   renderHoje(raiz, ctx, { document, filtros: filtrosHoje, linkProduto: Boolean(telas.produto) });
 }
 
+// Rede e câmera da lista por foto entram aqui; lista.js e lista_foto.js nunca chamam o fetch direto.
+const gemini = {
+  buscar: (url, init) => fetch(url, init),
+  criarBitmap: typeof createImageBitmap === "function" ? (arquivo, opcoes) => createImageBitmap(arquivo, opcoes) : null,
+  online: () => navigator.onLine !== false,
+  hoje: () => new Date(),
+};
+
 function telaLista(raiz, ctx) {
-  renderLista(raiz, ctx, { document, storage });
+  renderLista(raiz, ctx, { document, storage, window, gemini });
 }
 
 function telaColeta(raiz, ctx) {

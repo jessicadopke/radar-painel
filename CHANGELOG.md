@@ -1,5 +1,9 @@
 # Novidades do Radar
 
+## 0.10.0
+- Lista por foto: tire uma foto da sua lista (ou escolha da galeria) e veja onde comprar cada item, com o total de cada mercado e os itens sem oferta. A foto vai ao Google só para ser lida e não fica guardada
+- Corrigido: a tela Produto volta a mostrar o gráfico de preços dos últimos 90 dias, sem textos soltos e sem títulos repetidos
+
 ## 0.9.0
 - Lista de compras: marque o que vai comprar e veja o total e o melhor mercado de cada item. Fica só no seu celular
 

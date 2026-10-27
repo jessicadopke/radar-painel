@@ -3,12 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-9N0oQ8Z72c+eB4T1rK+CvJeDG+IbN77dyql9tuWrpHk='; connect-src 'self' https://generativelanguage.googleapis.com; img-src 'self' blob: data:; style-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <title>Radar</title>
   <meta name="theme-color" content="#1F5E3B" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0F1A14" media="(prefers-color-scheme: dark)">
-  <script>
-    try { var t = localStorage.getItem("radar-tema"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {}
-  </script>
+  <script>try { var t = localStorage.getItem("radar-tema"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) {}</script>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">

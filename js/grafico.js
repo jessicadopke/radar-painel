@@ -7,7 +7,7 @@ const MS_DIA = 86400000;
 const MAX_MERCADOS = 4;
 const DIAS_COM_PONTOS = 30;
 // Identificador do SVG montado em partes: o app não tem nenhum endereço literal.
-const NS = ["http:/", "", "www.w3.org", "2000", "svg"].join("/");
+const NS = ["http:", "", "www.w3.org", "2000", "svg"].join("/");
 
 // ---- datas (calendário em UTC, sem fuso) ----
 function diaParaNumero(iso) {

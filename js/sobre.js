@@ -8,8 +8,9 @@ export const EXPLICACAO = [
   "O Radar acompanha as ofertas dos mercados de Palmas: folhetos do Assaí e do Atacadão e as publicações dos mercados no Instagram.",
   "Os preços são lidos das imagens por inteligência artificial e podem ter erros. Confira na loja antes de decidir.",
   "A coleta roda duas vezes por dia, perto das 12h e das 21h, num computador. Se ele estiver desligado, os preços ficam velhos e o app avisa.",
-  "O app guarda a última cópia dos dados e abre sem internet. Os alertas aparecem só aqui dentro; nada é enviado para fora do celular.",
+  "O app guarda a última cópia dos dados e abre sem internet. Os alertas aparecem só aqui dentro; a lista e os alertas não saem do celular.",
   "A lista de compras também fica guardada só no seu aparelho: ninguém mais vê o que você marcou.",
+  "Na aba Lista você pode criar a lista por foto: a foto vai ao Google (Gemini) só para ser lida e não fica guardada, e a chave que você cadastra fica só neste aparelho.",
 ];
 
 export function temaValido(t) {

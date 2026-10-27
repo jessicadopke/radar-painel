@@ -113,7 +113,6 @@ export function renderProduto(raiz, ctx, deps) {
 
 function cartaoGrafico(produto, medida, parametros, el, doc) {
   const cartao = el("section", { className: "cartao" }, el("h3", { textContent: "Preço nos últimos 90 dias" }));
-  if (medida) cartao.append(el("p", { className: "muted", textContent: `Preço por ${medida}` }));
   try {
     renderGrafico(cartao, produto, parametros, { document: doc });
   } catch {
