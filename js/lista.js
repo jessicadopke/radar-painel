@@ -225,7 +225,7 @@ export function renderLista(raiz, ctx, deps) {
     e.append(...filhos);
     return e;
   };
-  const titulo = el("h2", { textContent: "Lista de compras", tabIndex: -1 });
+  const titulo = el("h2", { className: "so-leitor", textContent: "Lista de compras", tabIndex: -1 });
   const $foto = el("div", { className: "foto-area" });
 
   if (ctx.estadoDados === "atualize") {
@@ -233,7 +233,7 @@ export function renderLista(raiz, ctx, deps) {
     return;
   }
   if (ctx.estadoDados !== "ok" || !ctx.dados) {
-    raiz.append(titulo, el("div", { className: "cartao" }, el("p", { textContent: "Ainda sem dados. Abra o app com internet uma vez." })), $foto);
+    raiz.append(titulo, el("div", { className: "cartao" }, el("p", { textContent: "Ainda sem preços. Abra o app com internet uma vez." })), $foto);
     renderListaFoto($foto, ctx, deps, () => {});
     return;
   }

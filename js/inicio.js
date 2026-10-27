@@ -1,5 +1,8 @@
 // Tela Início: lógica pura (sem DOM) + montagem dos cartões. Nenhuma função lança exceção.
 
+import { cartaoOferta } from "./oferta.js";
+import { situacaoDe, textoEstado } from "./hoje.js";
+
 export const CHAVE_VISTO = "radar-visto-ate";
 const TIPOS = ["menor_periodo", "preco_bom"];
 
@@ -87,11 +90,11 @@ export function renderInicio(raiz, ctx, deps) {
       const b = el("a", { className: "botao", href: botao.href, textContent: botao.texto });
       c.append(el("div", { className: "acoes" }, b));
     }
-    raiz.append(el("h2", { textContent: "Início" }), c);
+    raiz.append(el("h2", { className: "so-leitor", textContent: "Início" }), c);
   };
 
   if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver os alertas.", { href: "#sobre", texto: "Ir para Sobre" });
-  if (ctx.estadoDados !== "ok" || !ctx.dados) return vazio("Ainda sem dados. Abra o app com internet uma vez.");
+  if (ctx.estadoDados !== "ok" || !ctx.dados) return vazio("Ainda sem preços. Abra o app com internet uma vez.");
   const alertas = alertasParaInicio(ctx.dados, deps.visitaAnterior);
   if (!alertas.length) return vazio("Nenhum alerta agora. Veja as ofertas de hoje na aba Hoje.", { href: "#hoje", texto: "Ver Hoje" });
 
@@ -107,26 +110,10 @@ export function renderInicio(raiz, ctx, deps) {
 }
 
 function cartao(a, medidas, deps, el) {
-  const medida = medidas.get(a.produto_id);
-  const topo = el("p", { className: "topo-alerta" });
-  if (a.novo) topo.append(el("span", { className: "selo-novo", textContent: "Novo" }));
-  topo.append(el("span", { className: "tipo", textContent: a.tipoTexto }));
-
-  const corpo = el("div", { className: "corpo" }, topo, el("h3", { textContent: String(a.produto_nome ?? "") }));
-  const lojas = formatarLojas(a.lojas);
-  corpo.append(el("p", { className: "muted", textContent: [a.mercado, lojas].filter(Boolean).join(" · ") }));
-  corpo.append(el("p", { className: "preco", textContent: formatarPreco(a.preco_medida) + (medida ? ` / ${medida}` : "") }));
-  if (a.alvo != null) corpo.append(el("p", { className: "muted", textContent: "Alvo: " + formatarPreco(a.alvo) }));
-  corpo.append(el("p", { className: "muted", textContent: formatarValidade(a.validade_fim, deps.hojeIso) }));
-
-  const filhos = [corpo];
-  if (a.miniatura) {
-    const img = el("img", { src: a.miniatura, loading: "lazy", width: 72, height: 72, alt: `Foto da oferta de ${a.produto_nome}` });
-    img.onerror = () => img.remove();
-    filhos.push(img);
-  }
-  const caixa = deps.linkProduto && a.produto_id != null
-    ? el("a", { className: "alerta", href: "#produto/" + encodeURIComponent(a.produto_id) }, ...filhos)
-    : el("div", { className: "alerta" }, ...filhos);
-  return caixa;
+  const alvo = typeof a.alvo === "number" ? { valor: a.alvo } : null;
+  const { situacao, diferenca } = situacaoDe({ preco_medida: a.preco_medida }, alvo);
+  return cartaoOferta(el, {
+    id: a.produto_id, nome: a.produto_nome, mercado: a.mercado, lojas: a.lojas, preco: a.preco_medida,
+    medida: medidas.get(a.produto_id), situacao, texto: textoEstado(diferenca, situacao), novo: a.novo, link: deps.linkProduto,
+  });
 }

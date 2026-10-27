@@ -4,8 +4,10 @@ import { formatarPreco } from "./inicio.js";
 
 const ehNumero = (n) => typeof n === "number" && Number.isFinite(n);
 const MS_DIA = 86400000;
-const MAX_MERCADOS = 4;
-const DIAS_COM_PONTOS = 30;
+const MAX_MERCADOS = 3;
+const MIN_DIAS_LINHA = 7;
+const LARG = 320;
+const ALT = 196;
 // Identificador do SVG montado em partes: o app não tem nenhum endereço literal.
 const NS = ["http:", "", "www.w3.org", "2000", "svg"].join("/");
 
@@ -44,30 +46,13 @@ export function pontosDaSerie(serie) {
   return saida;
 }
 
-// Marcas "redondas" (1, 2, 2,5, 5 x 10^n) dentro de [min, max], no máximo 4.
-export function marcasY(min, max) {
-  if (!ehNumero(min) || !ehNumero(max) || max <= min) return [];
-  const bruto = (max - min) / 3;
-  const mag = 10 ** Math.floor(Math.log10(bruto));
-  const passos = [];
-  for (let k = -1; k <= 1; k++) for (const f of [1, 2, 2.5, 5]) passos.push(f * mag * 10 ** k);
-  passos.sort((a, b) => a - b);
-  for (const passo of passos) {
-    if (passo < bruto * 0.9) continue;
-    const marcas = [];
-    for (let v = Math.ceil(min / passo - 1e-9); v * passo <= max + 1e-9; v++) marcas.push(Math.round(v * passo * 1e6) / 1e6 || 0);
-    if (marcas.length >= 1 && marcas.length <= 4) return marcas;
-  }
-  return [];
-}
-
 const alvoValido = (alvo) => !!alvo && typeof alvo === "object" && ehNumero(alvo.valor) && alvo.suficiente !== false;
 
 export function escalas(series, alvo, largura, altura) {
   const lista = Array.isArray(series) ? series : [];
   const L = ehNumero(largura) && largura > 0 ? largura : 320;
-  const A = ehNumero(altura) && altura > 0 ? altura : 180;
-  const margem = { esq: 56, dir: 10, topo: 12, base: 26 };
+  const A = ehNumero(altura) && altura > 0 ? altura : ALT;
+  const margem = { esq: 10, dir: 70, topo: 12, base: 28 };
   const dias = [];
   const precos = [];
   for (const s of lista) {
@@ -91,15 +76,15 @@ export function escalas(series, alvo, largura, altura) {
   const alturaUtil = A - margem.topo - margem.base;
   const x = (dia) => margem.esq + (((typeof dia === "string" ? diaParaNumero(dia) : dia) - d0) / nDias) * larguraUtil;
   const y = (preco) => margem.topo + (1 - (preco - lo) / (hi - lo)) * alturaUtil;
-  const inicio = numeroParaDia(d0);
-  const meio = numeroParaDia(d0 + Math.round(nDias / 2));
-  const fim = numeroParaDia(d1 > d0 ? d1 : d0 + 1);
-  const marcasX = [inicio, meio, fim].map((dia, i) => ({ dia, texto: ddmm(dia), x: x(dia), ancora: i === 0 ? "start" : i === 2 ? "end" : "middle" }));
+  const textoInicio = nDias === 1 ? "há 1 dia" : `há ${nDias} dias`;
+  const marcasX = [
+    { texto: textoInicio, x: x(d0), ancora: "start" },
+    { texto: "hoje", x: x(d0 + nDias), ancora: "end" },
+  ];
   return {
     largura: L, altura: A, margem, x, y,
-    eixoX: { inicio, fim: numeroParaDia(d1), dias: nDias },
+    eixoX: { inicio: numeroParaDia(d0), fim: numeroParaDia(d1), dias: nDias },
     eixoY: { min: lo, max: hi },
-    marcasY: marcasY(lo, hi).map((valor) => ({ valor, y: y(valor) })),
     marcasX,
   };
 }
@@ -114,7 +99,7 @@ export function estadoGrafico(series) {
   for (const s of Array.isArray(series) ? series : []) {
     for (const p of (s && s.pontos) || []) if (p && ehNumero(p.preco)) dias.add(p.dia);
   }
-  return dias.size === 0 ? "vazio" : dias.size < 2 ? "pouco" : "ok";
+  return dias.size === 0 ? "vazio" : dias.size < MIN_DIAS_LINHA ? "pouco" : "ok";
 }
 
 export function tabelaDaSerie(series) {
@@ -153,13 +138,30 @@ export function resumoGrafico(produto) {
   return partes.join(" ");
 }
 
-// ---- estilos dos mercados: traço + marcador próprios, além da cor ----
-const ESTILOS = [
-  { cor: "var(--brand)", traco: "", marcador: "circulo" },
-  { cor: "var(--fg)", traco: "7 3", marcador: "quadrado" },
-  { cor: "var(--muted)", traco: "2 3", marcador: "losango" },
-  { cor: "var(--brand)", traco: "9 3 2 3", marcador: "triangulo" },
-];
+// Título do cartão: período real da série (até 90 dias).
+export function tituloGrafico(produto) {
+  const series = pontosDaSerie(produto && produto.serie);
+  if (estadoGrafico(series) === "vazio") return "Histórico de preços";
+  if (estadoGrafico(series) === "pouco") return "Hoje, por mercado";
+  const n = Math.min(90, escalas(series, null).eixoX.dias);
+  return n === 1 ? "Último dia" : `Últimos ${n} dias`;
+}
+
+const GAP_ROTULO = 36; // nome (13 px) + preço/etiqueta (24 px) sem encostar no vizinho
+const nomeCurto = (t) => (t.length > 9 ? `${t.slice(0, 8)}…` : t);
+
+// Posições verticais dos rótulos da ponta: ordena, empurra para baixo e, se passar do limite, sobe.
+export function afastarRotulos(ys, min, max, gap = GAP_ROTULO) {
+  const ord = ys.map((y, i) => ({ i, y: Math.min(max, Math.max(min, y)) })).sort((a, b) => a.y - b.y);
+  for (let k = 1; k < ord.length; k++) if (ord[k].y - ord[k - 1].y < gap) ord[k].y = ord[k - 1].y + gap;
+  for (let k = ord.length - 1; k >= 0; k--) {
+    const teto = k === ord.length - 1 ? max : ord[k + 1].y - gap;
+    if (ord[k].y > teto) ord[k].y = teto;
+  }
+  const saida = [];
+  for (const o of ord) saida[o.i] = o.y;
+  return saida;
+}
 
 // ---- DOM ----
 // deps: { document }
@@ -182,7 +184,7 @@ export function renderGrafico(raiz, produto, parametros, deps) {
   const todas = pontosDaSerie(p.serie);
   const estado = estadoGrafico(todas);
   if (estado === "vazio") {
-    caixa.append(html("p", { className: "muted", textContent: "Ainda sem histórico de preços deste produto." }));
+    caixa.append(html("p", { className: "muted", textContent: "Ainda sem histórico deste produto." }));
     raiz.append(caixa);
     return;
   }
@@ -191,74 +193,13 @@ export function renderGrafico(raiz, produto, parametros, deps) {
   const mostradas = ordenadas.slice(0, MAX_MERCADOS);
   const extras = ordenadas.length - mostradas.length;
   const alvo = alvoValido(p.alvo) ? p.alvo : null;
-  const esc = escalas(mostradas, alvo, 320, 180);
-  const { margem } = esc;
-  const idBase = "grafico-" + String(p.id ?? "x").replace(/[^\w-]/g, "_");
 
-  const svg = svgEl("svg", { viewBox: "0 0 320 180", role: "img", "aria-labelledby": `${idBase}-t ${idBase}-d`, class: "grafico-svg" });
-  svg.append(svgEl("title", { id: `${idBase}-t` }, `Preço nos últimos 90 dias: ${String(p.nome ?? "")}`));
-  svg.append(svgEl("desc", { id: `${idBase}-d` }, resumoGrafico(p)));
-
-  for (const m of esc.marcasY) {
-    svg.append(svgEl("line", { class: "grafico-grade", x1: margem.esq, x2: esc.largura - margem.dir, y1: m.y, y2: m.y }));
-    svg.append(svgEl("text", { class: "grafico-rotulo", x: margem.esq - 4, y: m.y + 4, "text-anchor": "end" }, formatarPreco(m.valor)));
-  }
-  for (const m of esc.marcasX) {
-    svg.append(svgEl("text", { class: "grafico-rotulo", x: m.x, y: esc.altura - 6, "text-anchor": m.ancora }, m.texto));
-  }
-  if (alvo) {
-    const ya = esc.y(alvo.valor);
-    svg.append(svgEl("line", { class: "grafico-alvo", x1: margem.esq, x2: esc.largura - margem.dir, y1: ya, y2: ya, "stroke-dasharray": "4 3" }));
-    const acima = ya - 5 > margem.topo + 8;
-    svg.append(svgEl("text", { class: "grafico-rotulo grafico-rotulo-alvo", x: esc.largura - margem.dir, y: acima ? ya - 4 : ya + 13, "text-anchor": "end" }, `Alvo ${formatarPreco(alvo.valor)}`));
-  }
-
-  mostradas.forEach((s, i) => {
-    const est = ESTILOS[i % ESTILOS.length];
-    const g = svgEl("g", { class: "grafico-mercado", stroke: est.cor, fill: est.cor });
-    let trecho = [];
-    const fecha = () => {
-      if (trecho.length >= 2) {
-        g.append(svgEl("polyline", { class: "grafico-linha", fill: "none", "stroke-width": 2, "stroke-dasharray": est.traco, points: trecho.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(" ") }));
-      }
-      trecho = [];
-    };
-    const ult = ultimoPonto(s);
-    for (const pt of s.pontos) {
-      if (pt.preco == null) { fecha(); continue; }
-      trecho.push([esc.x(pt.dia), esc.y(pt.preco)]);
-    }
-    fecha();
-    // pontos: todos se houver até 30 dias com preço (dias isolados sempre); o último é maior
-    for (let n = 0; n < s.pontos.length; n++) {
-      const pt = s.pontos[n];
-      if (pt.preco == null) continue;
-      const isolado = (n === 0 || s.pontos[n - 1].preco == null) && (n === s.pontos.length - 1 || s.pontos[n + 1].preco == null);
-      const ultimo = pt === ult;
-      if (!(ultimo || isolado || s.comPreco <= DIAS_COM_PONTOS)) continue;
-      g.append(marcador(svgEl, est.marcador, esc.x(pt.dia), esc.y(pt.preco), ultimo ? 4.5 : 2.5));
-    }
-    svg.append(g);
-  });
-
-  caixa.append(svg);
   if (estado === "pouco") {
-    caixa.append(html("p", { className: "muted", textContent: "Só há 1 dia de histórico: o gráfico aparece quando houver mais dias." }));
+    caixa.append(barras(html, mostradas, alvo, p.medida));
+    if (alvo) caixa.append(html("p", { className: "nota-alvo", textContent: `Risca preta: alvo ${formatarPreco(alvo.valor)}. Com mais dias de coleta, aqui aparece a linha do tempo.` }));
+  } else {
+    caixa.append(linhas(svgEl, p, mostradas, alvo));
   }
-
-  const legenda = html("ul", { className: "grafico-legenda" });
-  mostradas.forEach((s, i) => {
-    const est = ESTILOS[i % ESTILOS.length];
-    const amostra = svgEl("svg", { class: "grafico-amostra", viewBox: "0 0 28 12", "aria-hidden": "true", focusable: "false" });
-    const g = svgEl("g", { stroke: est.cor, fill: est.cor });
-    g.append(svgEl("line", { x1: 1, x2: 27, y1: 6, y2: 6, "stroke-width": 2, "stroke-dasharray": est.traco }));
-    g.append(marcador(svgEl, est.marcador, 14, 6, 3.5));
-    amostra.append(g);
-    legenda.append(html("li", {}, amostra, html("span", { className: "grafico-nome", textContent: s.mercado }),
-      html("span", { className: "grafico-valor", textContent: formatarPreco(ultimoPonto(s).preco) })));
-  });
-  legenda.append(html("li", { className: "grafico-alvo-legenda", textContent: alvo ? `Alvo ${formatarPreco(alvo.valor)} (linha tracejada)` : "Alvo ainda em cálculo" }));
-  caixa.append(legenda);
   if (extras > 0) caixa.append(html("p", { className: "muted", textContent: `e mais ${extras} ${extras === 1 ? "mercado" : "mercados"} na tabela` }));
 
   // tabela alternativa (todos os mercados)
@@ -270,14 +211,88 @@ export function renderGrafico(raiz, produto, parametros, deps) {
     return html("tr", {}, th, ...nomes.map((n) => html("td", { textContent: linha.valores[n] != null ? formatarPreco(linha.valores[n]) : "—" })));
   }));
   const tabela = html("table", {}, html("thead", {}, cab), corpo);
-  caixa.append(html("details", { className: "grafico-tabela" }, html("summary", { textContent: "Ver os preços em tabela" }), html("div", { className: "grafico-rolagem" }, tabela)));
+  caixa.append(html("details", { className: "grafico-tabela" }, html("summary", { textContent: "Ver em tabela" }), html("div", { className: "grafico-rolagem" }, tabela)));
   raiz.append(caixa);
 }
 
-function marcador(svgEl, tipo, cx, cy, r) {
-  const f = (n) => n.toFixed(1);
-  if (tipo === "quadrado") return svgEl("rect", { x: f(cx - r), y: f(cy - r), width: f(2 * r), height: f(2 * r), stroke: "none" });
-  if (tipo === "losango") return svgEl("polygon", { points: `${f(cx)},${f(cy - r - 1)} ${f(cx + r + 1)},${f(cy)} ${f(cx)},${f(cy + r + 1)} ${f(cx - r - 1)},${f(cy)}`, stroke: "none" });
-  if (tipo === "triangulo") return svgEl("polygon", { points: `${f(cx)},${f(cy - r - 1)} ${f(cx + r + 1)},${f(cy + r)} ${f(cx - r - 1)},${f(cy + r)}`, stroke: "none" });
-  return svgEl("circle", { cx: f(cx), cy: f(cy), r: f(r), stroke: "none" });
+// Pouco histórico: barras horizontais com o preço de hoje de cada mercado.
+function barras(html, mostradas, alvo, medida) {
+  const precos = mostradas.map((s) => ultimoPonto(s).preco);
+  const topo = Math.max(...precos, alvo ? alvo.valor : 0) || 1;
+  const pct = (v) => `${Math.min(100, (v / topo) * 100).toFixed(1)}%`;
+  const ul = html("ul", { className: "barras" });
+  ul.setAttribute("aria-label", `Preço de hoje${medida ? ` por ${medida}` : ""}`);
+  mostradas.forEach((s, i) => {
+    const barra = html("div", { className: i === 0 ? "bar hoje" : "bar" });
+    barra.style.width = pct(precos[i]);
+    const trilho = html("div", { className: "tr" }, barra);
+    if (alvo) {
+      const marca = html("div", { className: "alvo" });
+      marca.style.left = pct(alvo.valor);
+      trilho.append(marca);
+    }
+    ul.append(html("li", {}, html("span", { className: "n", textContent: s.mercado }), trilho, html("span", { className: "v", textContent: formatarPreco(precos[i]) })));
+  });
+  return ul;
+}
+
+function linhas(svgEl, p, mostradas, alvo) {
+  const esc = escalas(mostradas, alvo, LARG, ALT);
+  const { margem } = esc;
+  const idBase = "grafico-" + String(p.id ?? "x").replace(/[^\w-]/g, "_");
+  const xFim = esc.largura - margem.dir;
+  const yBase = esc.altura - margem.base;
+  const svg = svgEl("svg", { viewBox: `0 0 ${LARG} ${ALT}`, role: "img", "aria-labelledby": `${idBase}-t ${idBase}-d`, class: "grafico-svg" });
+  svg.append(svgEl("title", { id: `${idBase}-t` }, `${tituloGrafico(p)}: ${String(p.nome ?? "")}`));
+  svg.append(svgEl("desc", { id: `${idBase}-d` }, resumoGrafico(p)));
+
+  const trechos = mostradas.map((s) => {
+    const lista = [];
+    let atual = [];
+    for (const pt of s.pontos) {
+      if (pt.preco == null) { if (atual.length) lista.push(atual); atual = []; continue; }
+      atual.push([esc.x(pt.dia), esc.y(pt.preco)]);
+    }
+    if (atual.length) lista.push(atual);
+    return lista;
+  });
+
+  if (alvo) {
+    const ya = esc.y(alvo.valor);
+    svg.append(svgEl("rect", { class: "grafico-faixa", x: margem.esq, y: ya.toFixed(1), width: xFim - margem.esq, height: Math.max(0, yBase - ya).toFixed(1) }));
+    svg.append(svgEl("line", { class: "grafico-alvo", x1: margem.esq, x2: xFim, y1: ya.toFixed(1), y2: ya.toFixed(1), "stroke-dasharray": "3 3" }));
+    // rótulo à esquerda: acima da linha, ou abaixo se for onde a linha dos preços passa
+    const bate = (y0, y1) => trechos.some((t) => t.some((q) => q.length && q[0] < margem.esq + 92 && q[1] > y0 - 2 && q[1] < y1 + 2));
+    const abaixo = bate(ya - 19, ya - 3) && !bate(ya + 3, ya + 19);
+    svg.append(svgEl("text", { class: "grafico-txt-fg", x: margem.esq + 2, y: (abaixo ? ya + 16 : ya - 5).toFixed(1) }, `Alvo ${formatarPreco(alvo.valor)}`));
+  }
+
+  for (const m of esc.marcasX) {
+    svg.append(svgEl("text", { class: "grafico-txt", x: m.x.toFixed(1), y: esc.altura - 6, "text-anchor": m.ancora }, m.texto));
+  }
+
+  // outras primeiro, o mais barato por cima
+  for (let i = mostradas.length - 1; i >= 0; i--) {
+    const barato = i === 0;
+    for (const t of trechos[i]) {
+      if (t.length < 2) continue;
+      svg.append(svgEl("polyline", { class: barato ? "grafico-linha grafico-hoje" : "grafico-linha grafico-outra", points: t.map((q) => `${q[0].toFixed(1)},${q[1].toFixed(1)}`).join(" ") }));
+    }
+  }
+  const fins = mostradas.map((s) => { const u = ultimoPonto(s); return { x: esc.x(u.dia), y: esc.y(u.preco), preco: u.preco }; });
+  const ly = afastarRotulos(fins.map((f) => f.y), margem.topo + 8, yBase - 22);
+  mostradas.forEach((s, i) => {
+    const barato = i === 0;
+    const f = fins[i];
+    svg.append(svgEl("circle", { class: barato ? "grafico-pt" : "grafico-pt-m", cx: f.x.toFixed(1), cy: f.y.toFixed(1), r: barato ? 6 : 4 }));
+    const tx = xFim + 6;
+    svg.append(svgEl("text", { class: "grafico-txt", x: tx, y: (ly[i] - 8).toFixed(1) }, nomeCurto(s.mercado)));
+    if (barato) {
+      svg.append(svgEl("rect", { class: "grafico-et", x: tx - 2, y: (ly[i] - 4).toFixed(1), width: LARG - xFim - 4, height: 24, rx: 12 }));
+      svg.append(svgEl("text", { class: "grafico-et-txt", x: tx + 6, y: (ly[i] + 13).toFixed(1) }, formatarPreco(f.preco)));
+    } else {
+      svg.append(svgEl("text", { class: "grafico-preco", x: tx, y: (ly[i] + 7).toFixed(1) }, formatarPreco(f.preco)));
+    }
+  });
+  return svg;
 }

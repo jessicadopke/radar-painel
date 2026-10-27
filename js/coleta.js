@@ -1,7 +1,7 @@
 // Tela Coleta: lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
 // Usa só o que o dados.json formato 1 traz em "coleta" (sem mensagem de erro, sem logs, sem caminhos).
 import { formatarGeradoEm, minutosIso as minutos } from "./dados.js";
-import { HORAS_PARADA } from "./frescor.js";
+import { HORAS_PARADA, situacaoFrescor } from "./frescor.js";
 
 export { HORAS_PARADA };
 const NOMES = { assai: "Assaí", atacadao: "Atacadão", instagram: "Instagram" };
@@ -82,17 +82,20 @@ export function renderColeta(raiz, ctx, deps) {
     e.append(...filhos);
     return e;
   };
-  raiz.append(el("h2", { textContent: "Coleta" }));
+  raiz.append(el("h2", { className: "so-leitor", textContent: "Coleta" }));
   const aviso = (texto, link) => {
     const c = el("div", { className: "cartao" }, el("p", { textContent: texto }));
     if (link) c.append(el("div", { className: "acoes" }, link));
     raiz.append(c);
   };
   if (ctx.estadoDados === "atualize") return aviso("Atualize o app para ver a coleta.", el("a", { className: "botao", href: "#sobre", textContent: "Ir para Sobre" }));
-  if (ctx.estadoDados !== "ok" || !ctx.dados) return aviso("Ainda sem dados. Abra o app com internet uma vez.");
+  if (ctx.estadoDados !== "ok" || !ctx.dados) return aviso("Ainda sem preços. Abra o app com internet uma vez.");
 
   const dados = ctx.dados;
   raiz.append(el("p", { className: "muted", textContent: textoQuando(dados.coleta && dados.coleta.ultima_execucao_em) }));
+  if (deps.agora && situacaoFrescor(dados.gerado_em, deps.agora).estado === "velho") {
+    raiz.append(el("p", { className: "muted", textContent: "O computador da coleta pode estar desligado." }));
+  }
   const fontes = fontesParaTela(dados);
   if (!fontes.length) aviso("Nenhuma fonte registrada ainda.");
   for (const f of fontes) {

@@ -1,7 +1,7 @@
 // Tela Produto: lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
 import { formatarPreco, formatarLojas, formatarValidade } from "./inicio.js";
-import { situacaoDe, textoDiferenca } from "./hoje.js";
-import { renderGrafico } from "./grafico.js";
+import { situacaoDe, textoDiferenca, textoEstado } from "./hoje.js";
+import { renderGrafico, tituloGrafico } from "./grafico.js";
 
 const ehNumero = (n) => typeof n === "number" && Number.isFinite(n);
 
@@ -81,76 +81,111 @@ export function renderProduto(raiz, ctx, deps) {
     e.append(...filhos);
     return e;
   };
-  const voltar = el("a", { className: "voltar", href: "#hoje", textContent: "← Voltar" });
+  const voltar = el("a", { className: "voltar", href: "#hoje", textContent: "← Produtos" });
   const vazio = (texto, botao) => {
     const c = el("div", { className: "cartao" }, el("p", { textContent: texto }));
     if (botao) c.append(el("div", { className: "acoes" }, botao));
     raiz.append(voltar, c);
   };
-  const irHoje = () => el("a", { className: "botao", href: "#hoje", textContent: "Ir para Hoje" });
+  const irHoje = () => el("a", { className: "botao", href: "#hoje", textContent: "Ir para Produtos" });
 
   if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver as ofertas.", el("a", { className: "botao", href: "#sobre", textContent: "Ir para Sobre" }));
-  if (ctx.estadoDados !== "ok" || !ctx.dados) return vazio("Ainda sem dados. Abra o app com internet uma vez.", irHoje());
+  if (ctx.estadoDados !== "ok" || !ctx.dados) return vazio("Ainda sem preços. Abra o app com internet uma vez.", irHoje());
   const produto = acharProduto(ctx.dados, ctx.rota && ctx.rota.id);
   if (!produto) return vazio("Não achei esse produto na lista de hoje.", irHoje());
 
   const nome = String(produto.nome ?? "");
   const medida = produto.medida ? String(produto.medida) : "";
   raiz.append(voltar, el("h2", { textContent: nome }));
-  if (produto.categoria) raiz.append(el("p", { className: "muted", textContent: String(produto.categoria) }));
-  if (medida) raiz.append(el("p", { className: "muted", textContent: `Preço por ${medida}` }));
-  raiz.append(el("div", { className: "cartao" }, el("p", { textContent: textoAlvo(produto.alvo, ctx.dados.parametros) })));
-
-  raiz.append(cartaoGrafico(produto, medida, ctx.dados.parametros, el, doc));
+  const sub = [produto.categoria ? String(produto.categoria) : "", medida ? `preço por ${medida}` : ""].filter(Boolean).join(" · ");
+  if (sub) raiz.append(el("p", { className: "muted sub-produto", textContent: sub }));
 
   const linhas = ofertasDoProduto(produto);
   if (!linhas.length) {
+    raiz.append(cartaoGrafico(produto, medida, ctx.dados.parametros, el, doc));
     raiz.append(el("div", { className: "cartao" }, el("p", { textContent: "Sem oferta agora em nenhum mercado." })));
     return;
   }
-  linhas.forEach((l, n) => raiz.append(cartaoOferta(l, n, nome, medida, el, doc)));
+  raiz.append(heroi(linhas[0], produto, nome, medida, el));
+  raiz.append(cartaoGrafico(produto, medida, ctx.dados.parametros, el, doc));
+  if (linhas.length > 1) {
+    raiz.append(el("h2", { className: "titulo-sec", textContent: "Outros mercados" }));
+    const lista = el("div", { className: "cartao tight" });
+    linhas.slice(1).forEach((l) => lista.append(linhaMercado(l, linhas[0].oferta, medida, el)));
+    raiz.append(lista);
+  }
+  raiz.append(detalhes(linhas[0].oferta, nome, medida, el, doc));
+}
+
+export function textoVisto(coletadaEm) {
+  const m = /^\d{4}-(\d{2})-(\d{2})/.exec(String(coletadaEm ?? ""));
+  return m ? `visto ${m[2]}/${m[1]}` : "";
+}
+
+// "+33%" em relação ao mais barato; vazio quando não é maior.
+export function textoMais(oferta, maisBarato) {
+  const a = oferta && oferta.preco_medida, b = maisBarato && maisBarato.preco_medida;
+  if (!ehNumero(a) || !ehNumero(b) || b <= 0 || a <= b) return "";
+  const pct = Math.round(((a - b) / b) * 100);
+  return pct > 0 ? `+${pct}%` : "";
+}
+
+function heroi(l, produto, nome, medida, el) {
+  const o = l.oferta;
+  const validade = formatarValidade(o.validade_fim, hojeLocal());
+  const loja = formatarLojas(o.lojas);
+  const sub = loja ? `${loja} · ${validade.charAt(0).toLowerCase()}${validade.slice(1)}` : validade;
+  const et = el("span", { className: "preco-et" + (l.situacao === "abaixo" ? " bom" : "") }, formatarPreco(o.preco_medida));
+  if (medida && ehNumero(o.preco_medida)) et.append(el("small", { textContent: `por ${medida}` }));
+  const meio = el("span", { className: "meio" }, el("span", { className: "merc", textContent: String(o.mercado ?? "") }));
+  meio.append(el("span", { className: "muted", textContent: sub }));
+  const caixa = el("section", { className: "heroi" }, el("p", { className: "cima", textContent: "Mais barato hoje" }), el("div", { className: "linha" }, meio, et));
+  let fim = textoEstado(l.diferenca, l.situacao);
+  if (fim && ehNumero(produto.alvo && produto.alvo.valor)) fim += ` (${formatarPreco(produto.alvo.valor)})`;
+  else if (l.situacao === "sem-alvo") fim = "Alvo ainda em cálculo";
+  if (fim) caixa.append(el("p", { className: "fim", textContent: fim }));
+  const cond = textoCondicao(o, medida);
+  if (cond) caixa.append(el("p", { className: "muted", textContent: cond }));
+  return caixa;
+}
+
+function linhaMercado(l, maisBarato, medida, el) {
+  const o = l.oferta;
+  const meio = el("span", { className: "meio" }, el("b", { textContent: String(o.mercado ?? "") }));
+  const loja = [formatarLojas(o.lojas), textoVisto(o.coletada_em)].filter(Boolean).join(" · ");
+  if (loja) meio.append(el("div", { className: "sub", textContent: loja }));
+  const cond = textoCondicao(o, medida);
+  if (cond) meio.append(el("div", { className: "sub", textContent: cond }));
+  const p = el("span", { className: "p" }, formatarPreco(o.preco_medida));
+  const mais = textoMais(o, maisBarato);
+  if (mais) p.append(el("small", { className: "mais", textContent: mais }));
+  return el("div", { className: "linha-merc" }, meio, p);
+}
+
+function detalhes(o, nome, medida, el, doc) {
+  const mercado = String(o.mercado ?? "");
+  const corpo = el("div", { className: "corpo" });
+  const add = (classe, texto) => { if (texto) corpo.append(el("p", { className: classe, textContent: texto })); };
+  if (o.oferta) corpo.append(el("p", { textContent: String(o.oferta) }));
+  if (o.marca) corpo.append(el("p", { textContent: String(o.marca) }));
+  add("muted", textoEmbalagem(o));
+  add("muted", formatarValidade(o.validade_fim, hojeLocal()));
+  add("muted", [textoOrigem(o.origem), textoColetada(o.coletada_em)].filter(Boolean).join(" · "));
+  const dentro = el("div", { className: "oferta-produto" });
+  const caminho = miniaturaSegura(o.miniatura);
+  if (caminho) dentro.append(botaoFoto(caminho, nome, mercado, el, doc));
+  dentro.append(corpo);
+  return el("details", { className: "rec detalhes-folheto" }, el("summary", { textContent: "Detalhes e foto do folheto" }), dentro);
 }
 
 function cartaoGrafico(produto, medida, parametros, el, doc) {
-  const cartao = el("section", { className: "cartao" }, el("h3", { textContent: "Preço nos últimos 90 dias" }));
+  const cartao = el("section", { className: "cartao" }, el("h3", { textContent: tituloGrafico(produto) }));
   try {
     renderGrafico(cartao, produto, parametros, { document: doc });
   } catch {
     cartao.append(el("p", { textContent: "Não consegui desenhar o gráfico" }));
   }
   return cartao;
-}
-
-function cartaoOferta(l, n, nomeProduto, medida, el, doc) {
-  const o = l.oferta;
-  const mercado = String(o.mercado ?? "");
-  const idTitulo = `oferta-${n}`;
-  const titulo = el("h3", { id: idTitulo, textContent: mercado });
-  const cab = el("div", { className: "cab-oferta" }, titulo);
-  if (l.maisBarato) cab.append(el("span", { className: "selo-barato", textContent: "Mais barato" }));
-  const corpo = el("div", { className: "corpo" }, cab);
-  const add = (classe, texto) => { if (texto) corpo.append(el("p", { className: classe, textContent: texto })); };
-
-  add("muted", formatarLojas(o.lojas));
-  corpo.append(el("p", { className: "preco", textContent: textoLinhaPreco(o, medida) }));
-  if (o.oferta) corpo.append(el("p", { textContent: String(o.oferta) }));
-  if (o.marca) corpo.append(el("p", { textContent: String(o.marca) }));
-  add("muted", textoEmbalagem(o));
-  add("muted", textoCondicao(o, medida));
-  const selo = l.situacao === "abaixo" ? "Abaixo do alvo" : l.situacao === "no-alvo" ? "No alvo" : "";
-  const linha = el("p", { className: "diferenca" });
-  if (selo) linha.append(el("span", { className: "selo-alvo", textContent: selo }), " ");
-  linha.append(textoDiferenca(l.diferenca, l.situacao));
-  corpo.append(linha);
-  add("muted", formatarValidade(o.validade_fim, hojeLocal()));
-  add("muted", [textoOrigem(o.origem), textoColetada(o.coletada_em)].filter(Boolean).join(" · "));
-
-  const secao = el("section", { className: "cartao oferta-produto" });
-  secao.setAttribute("aria-labelledby", idTitulo);
-  const caminho = miniaturaSegura(o.miniatura);
-  if (caminho) secao.append(botaoFoto(caminho, nomeProduto, mercado, el, doc));
-  secao.append(corpo);
-  return secao;
 }
 
 function hojeLocal() {

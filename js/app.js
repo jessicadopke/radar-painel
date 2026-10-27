@@ -1,14 +1,14 @@
 import { newerThan } from "./versao.js";
-import { carregarDados, formatarGeradoEm } from "./dados.js";
+import { carregarDados } from "./dados.js";
 import { renderHoje } from "./hoje.js";
 import { renderLista } from "./lista.js";
-import { atualizarAviso } from "./frescor.js";
+import { atualizarChip } from "./frescor.js";
 import { renderColeta } from "./coleta.js";
 import { renderProduto } from "./produto.js";
 import { EXPLICACAO, NOME_TEMA, lerTema, gravarTema, proximoTema, lerChangelog } from "./sobre.js";
 import { renderInicio, lerVisitaAnterior, gravarVisita } from "./inicio.js";
 
-const VERSION = "0.10.0";
+const VERSION = "0.11.0";
 const PREFIXO_CACHE = "radar-";
 
 const $tela = document.getElementById("tela");
@@ -76,16 +76,22 @@ window.addEventListener("hashchange", mostrar);
 
 // ---- dados ----
 function cabecalho() {
-  if (estadoDados === "atualize") $atualizado.textContent = "Atualize o app para ler os dados.";
-  else if (estadoDados === "ok" && dados) $atualizado.textContent = "Dados de " + formatarGeradoEm(dados.gerado_em);
-  else $atualizado.textContent = "Ainda sem dados";
   conferirFrescor();
 }
 
-// Aviso de mais de 26 h sem coleta: usa a hora de agora do aparelho, também sem internet (última cópia).
+// Chip do topo: usa a hora de agora do aparelho, também sem internet (última cópia).
+// A faixa cheia fica só para "app velho" (o dados.json é de um formato que este app não lê).
 function conferirFrescor() {
   const dadosOk = estadoDados === "ok" ? dados : null;
-  atualizarAviso($avisoVelho, dadosOk, { agora: new Date(), offline: navigator.onLine === false });
+  if (estadoDados === "atualize") {
+    $atualizado.hidden = true;
+    $avisoVelho.textContent = "Há uma versão nova. Toque em Sobre, depois em Buscar atualização.";
+    $avisoVelho.hidden = false;
+    return;
+  }
+  $atualizado.hidden = false;
+  $avisoVelho.hidden = true;
+  atualizarChip($atualizado, dadosOk, { agora: new Date(), offline: navigator.onLine === false });
 }
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") conferirFrescor(); });
 window.addEventListener("online", conferirFrescor);
@@ -151,7 +157,7 @@ function telaLista(raiz, ctx) {
 }
 
 function telaColeta(raiz, ctx) {
-  renderColeta(raiz, ctx, { document });
+  renderColeta(raiz, ctx, { document, agora: new Date() });
 }
 
 function telaProduto(raiz, ctx) {
@@ -198,7 +204,7 @@ function telaSobre(raiz) {
   const novidades = el("div", { className: "cartao" }, el("h3", { textContent: "Novidades" }), el("p", { className: "muted", textContent: "Carregando…" }));
   carregarNovidades(novidades);
   raiz.append(
-    el("h2", { textContent: "Sobre o app" }),
+    el("h2", { className: "so-leitor", textContent: "Sobre o app" }),
     el("div", { className: "cartao" },
       el("p", { textContent: "Radar — ofertas dos mercados de Palmas." }),
       el("p", { className: "muted", textContent: "Versão " + VERSION }),

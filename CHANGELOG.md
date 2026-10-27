@@ -1,5 +1,12 @@
 # Novidades do Radar
 
+## 0.11.0
+- Gráfico de preços da tela Produto refeito: o preço aparece na ponta da linha, há uma marca para hoje, uma faixa mostra o preço-alvo e, quando há pouco histórico, o gráfico mostra barras
+- Topo mais compacto: um selo mostra se os preços são de hoje, de ontem ou de outra data, e avisa quando você está sem internet
+- Ofertas com o mesmo cartão em Início e Produtos, com etiqueta de oferta
+- Tela Produtos com uma só fileira de filtros, sem contagem; as ofertas boas aparecem primeiro
+- Tela Produto abre com o mercado mais barato em destaque e o preço-alvo junto. Os outros mercados ficam em "Outros mercados", e a foto do folheto e os detalhes ficam recolhidos. Preço condicional continua visível
+
 ## 0.10.0
 - Lista por foto: tire uma foto da sua lista (ou escolha da galeria) e veja onde comprar cada item, com o total de cada mercado e os itens sem oferta. A foto vai ao Google só para ser lida e não fica guardada
 - Corrigido: a tela Produto volta a mostrar o gráfico de preços dos últimos 90 dias, sem textos soltos e sem títulos repetidos
