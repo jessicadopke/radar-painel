@@ -1,16 +1,15 @@
-// Tela Sobre: lógica pura (sem DOM). Nenhuma função lança exceção.
+// Tela Mais (tema, "Como funciona", novidades): lógica pura (sem DOM). Nenhuma função lança exceção.
 
 export const CHAVE_TEMA = "radar-tema";
 export const TEMAS = ["auto", "light", "dark"];
-export const NOME_TEMA = { auto: "Automático (segue o celular)", light: "Claro", dark: "Escuro" };
+export const NOME_TEMA = { auto: "Automático", light: "Claro", dark: "Escuro" };
 
 export const EXPLICACAO = [
-  "O Radar acompanha as ofertas dos mercados de Palmas: folhetos do Assaí e do Atacadão e as publicações dos mercados no Instagram.",
-  "Os preços são lidos das imagens por inteligência artificial e podem ter erros. Confira na loja antes de decidir.",
-  "A coleta roda duas vezes por dia, perto das 12h e das 21h, num computador. Se ele estiver desligado, os preços ficam velhos e o app avisa.",
-  "O app guarda a última cópia dos dados e abre sem internet. Os alertas aparecem só aqui dentro; a lista e os alertas não saem do celular.",
-  "A lista de compras também fica guardada só no seu aparelho: ninguém mais vê o que você marcou.",
-  "Na aba Lista você pode criar a lista por foto: a foto vai ao Google (Gemini) só para ser lida e não fica guardada, e a chave que você cadastra fica só neste aparelho.",
+  "O Radar junta as ofertas do Assaí e do Atacadão de Palmas.",
+  "A leitura é automática e pode errar. Confira o preço na loja.",
+  "Os preços são atualizados 2 vezes por dia. Sem internet, você vê a última cópia.",
+  "Sua lista e seus alertas ficam só neste celular.",
+  "O melhor mercado é o de menor preço por kg/un; o total soma o preço da embalagem.",
 ];
 
 export function temaValido(t) {
@@ -49,4 +48,9 @@ export function lerChangelog(texto) {
     if (i && atual) atual.itens.push(i[1]);
   }
   return saida;
+}
+
+// Versão mais nova do changelog (a primeira da lista); lista vazia ou inválida -> null.
+export function versaoAtual(lista) {
+  return Array.isArray(lista) && lista.length && lista[0] && typeof lista[0] === "object" ? lista[0] : null;
 }

@@ -2,6 +2,7 @@
 
 import { cartaoOferta } from "./oferta.js";
 import { situacaoDe, textoEstado } from "./hoje.js";
+import { lerLista, resumoDaLista, centavosParaTexto } from "./lista.js";
 
 export const CHAVE_VISTO = "radar-visto-ate";
 const TIPOS = ["menor_periodo", "preco_bom"];
@@ -67,15 +68,15 @@ export function gravarVisita(storage, geradoEm) {
   } catch {}
 }
 
-// ---- textos do cabeçalho ----
-export function tituloLista(total, novos, primeiraAbertura) {
-  const linhas = [total === 1 ? "1 alerta valendo" : `${total} alertas valendo`];
-  if (novos > 0) linhas.push(primeiraAbertura ? `${novos} ${novos === 1 ? "novo" : "novos"}` : `${novos} ${novos === 1 ? "novo" : "novos"} desde a sua última visita`);
-  return linhas;
+// "4 itens · 2 mercados" (a parte de mercados some se nenhum item tem preço).
+export function textoFaixaLista(itens, mercados) {
+  const partes = [itens === 1 ? "1 item" : `${itens} itens`];
+  if (mercados > 0) partes.push(mercados === 1 ? "1 mercado" : `${mercados} mercados`);
+  return partes.join(" · ");
 }
 
 // ---- DOM ----
-// deps: { document, visitaAnterior, hojeIso, linkProduto (bool) }
+// deps: { document, visitaAnterior, hojeIso, linkProduto (bool), storage (opcional) }
 export function renderInicio(raiz, ctx, deps) {
   const doc = deps.document;
   const el = (tag, props = {}, ...filhos) => {
@@ -83,6 +84,16 @@ export function renderInicio(raiz, ctx, deps) {
     Object.assign(e, props);
     e.append(...filhos);
     return e;
+  };
+  const faixaLista = () => {
+    if (!deps.storage || !ctx.dados) return null;
+    const lista = lerLista(deps.storage);
+    const r = resumoDaLista(ctx.dados, lista);
+    if (!r.itens) return null;
+    const a = el("a", { className: "faixa-lista", href: "#lista" },
+      el("span", { className: "faixa-texto" }, "Minha lista", el("small", { textContent: textoFaixaLista(r.itens, r.mercados) })));
+    if (r.totalCent !== null) a.append(el("b", { textContent: centavosParaTexto(r.totalCent) }));
+    return a;
   };
   const vazio = (texto, botao) => {
     const c = el("div", { className: "cartao" }, el("p", { textContent: texto }));
@@ -93,20 +104,28 @@ export function renderInicio(raiz, ctx, deps) {
     raiz.append(el("h2", { className: "so-leitor", textContent: "Início" }), c);
   };
 
-  if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver os alertas.", { href: "#sobre", texto: "Ir para Sobre" });
+  if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver os alertas.", { href: "#mais", texto: "Ir para Mais" });
   if (ctx.estadoDados !== "ok" || !ctx.dados) return vazio("Ainda sem preços. Abra o app com internet uma vez.");
   const alertas = alertasParaInicio(ctx.dados, deps.visitaAnterior);
-  if (!alertas.length) return vazio("Nenhum alerta agora. Veja as ofertas de hoje na aba Hoje.", { href: "#hoje", texto: "Ver Hoje" });
+  const faixa = faixaLista();
+  if (faixa) raiz.append(faixa);
+  if (!alertas.length) {
+    raiz.append(el("h2", { className: "so-leitor", textContent: "Início" }),
+      el("div", { className: "cartao vazio-inicio" },
+        el("p", { className: "vazio-titulo", textContent: "Nenhuma oferta boa hoje" }),
+        el("p", { className: "muted", textContent: "Quando um preço ficar abaixo do alvo, ele aparece aqui." }),
+        el("div", { className: "acoes" }, el("a", { className: "botao", href: "#produtos", textContent: "Ver todos os produtos" }))));
+    return;
+  }
 
   const novos = alertas.filter((a) => a.novo);
   const antigos = alertas.filter((a) => !a.novo);
-  const [titulo, ...resto] = tituloLista(alertas.length, novos.length, deps.visitaAnterior == null);
-  raiz.append(el("h2", { textContent: titulo }));
-  for (const t of resto) raiz.append(el("p", { className: "muted", textContent: t }));
+  raiz.append(el("h2", { className: "titulo-ofertas" }, "Ofertas boas hoje", el("span", { className: "contagem-ofertas", textContent: String(alertas.length) })));
   const medidas = new Map((Array.isArray(ctx.dados.produtos) ? ctx.dados.produtos : []).map((p) => [p && p.id, p && p.medida]));
   novos.forEach((a) => raiz.append(cartao(a, medidas, deps, el)));
   if (novos.length && antigos.length) raiz.append(el("h3", { className: "subtitulo", textContent: "Já vistos" }));
   antigos.forEach((a) => raiz.append(cartao(a, medidas, deps, el)));
+  raiz.append(el("div", { className: "acoes" }, el("a", { className: "botao sec", href: "#produtos", textContent: "Ver todos os produtos" })));
 }
 
 function cartao(a, medidas, deps, el) {

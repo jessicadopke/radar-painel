@@ -178,6 +178,13 @@ export function planoDeCompra(dados, lista) {
   return { grupos: lista2, totalCent: lista2.reduce((s, g) => s + g.subtotalCent, 0) };
 }
 
+// Resumo para a faixa do Início: quantos itens, em quantos mercados e o total (null se nenhum item tem preço).
+export function resumoDaLista(dados, lista) {
+  const itens = itensDe(lista).length + extrasDe(lista).length;
+  const plano = planoDeCompra(dados, lista);
+  return { itens, mercados: plano.grupos.length, totalCent: plano.grupos.length ? plano.totalCent : null };
+}
+
 // Total se comprar tudo em cada mercado; itens que o mercado não tem ficam de fora ("faltam").
 export function totaisPorMercado(dados, lista) {
   const itens = ativos(dados, lista);
@@ -195,6 +202,12 @@ export function totaisPorMercado(dados, lista) {
   });
   linhas.sort((a, b) => (b.cobertos - a.cobertos) || (a.totalCent - b.totalCent) || comparaTexto(a.mercado, b.mercado));
   return linhas;
+}
+
+// Ordem de exibição: a de entrada, com os já pegos no fim (estável).
+export function ordenarItens(itens) {
+  const l = listaDe(itens);
+  return [...l.filter((i) => !(i && i.pego)), ...l.filter((i) => i && i.pego)];
 }
 
 // ---- busca para adicionar ----
@@ -229,7 +242,7 @@ export function renderLista(raiz, ctx, deps) {
   const $foto = el("div", { className: "foto-area" });
 
   if (ctx.estadoDados === "atualize") {
-    raiz.append(titulo, el("div", { className: "cartao" }, el("p", { textContent: "Atualize o app para montar a lista." }), el("div", { className: "acoes" }, el("a", { className: "botao", href: "#sobre", textContent: "Ir para Sobre" }))));
+    raiz.append(titulo, el("div", { className: "cartao" }, el("p", { textContent: "Atualize o app para montar a lista." }), el("div", { className: "acoes" }, el("a", { className: "botao", href: "#mais", textContent: "Ir para Mais" }))));
     return;
   }
   if (ctx.estadoDados !== "ok" || !ctx.dados) {
@@ -242,10 +255,15 @@ export function renderLista(raiz, ctx, deps) {
   let confirmando = false;
 
   const $aviso = el("p", { className: "aviso", role: "status", hidden: true, textContent: "Não consegui guardar a lista neste aparelho" });
-  const $busca = el("input", { type: "search", className: "busca", placeholder: "Procurar produto (ex.: café)", autocomplete: "off" });
+  const $busca = el("input", { type: "search", className: "busca", placeholder: "Procurar produto", autocomplete: "off" });
   $busca.setAttribute("aria-label", "Procurar produto para a lista");
   const $resultados = el("div", { className: "resultados-lista" });
+  const $topo = el("div", { className: "topo-lista" });
+  const $entrada = el("div", { className: "entrada-lista" });
+  const $slot = el("div", { className: "foto-slot" });
   const $corpo = el("div", { className: "corpo-lista" });
+  const vazia = () => !lista.itens.length && !lista.extras.length;
+  let foto;
   const $resto = el("div", { className: "resto-lista" });
 
   function mudar(novaLista) {
@@ -279,95 +297,129 @@ export function renderLista(raiz, ctx, deps) {
     }
   }
 
+  // Um item aberto por vez (controles de quantidade); estado só em memória.
+  let abertoId = null;
+  let focarId = null;
+  const botoesMeio = new Map();
+
+  function botaoTirar(nome, aoClicar) {
+    const b = el("button", { type: "button", className: "mini tirar", textContent: "×" });
+    b.setAttribute("aria-label", "Tirar da lista: " + nome);
+    b.addEventListener("click", aoClicar);
+    return b;
+  }
+
   function linhaItem(i) {
     const nome = i.nome ?? "Produto não está mais na lista do Radar";
+    const o = i.oferta;
     const caixa = el("input", { type: "checkbox", className: "pego", checked: i.pego });
     caixa.setAttribute("aria-label", "Já peguei " + nome);
     caixa.addEventListener("change", () => mudar(alternarPego(lista, i.id)));
-    const topo = el("div", { className: "topo-item" }, caixa, el("span", { className: "nome" + (i.pego ? " pego" : ""), textContent: nome }));
-    const qtd = el("div", { className: "qtd" },
-      botaoPequeno("−", "Diminuir quantidade de " + nome, () => mudar(alterarQuantidade(lista, i.id, i.qtd - 1))),
-      el("span", { className: "qtd-valor", textContent: String(i.qtd) }),
-      botaoPequeno("+", "Aumentar quantidade de " + nome, () => mudar(alterarQuantidade(lista, i.id, i.qtd + 1))));
-    const rem = el("button", { type: "button", className: "mini remover", textContent: "Remover" });
-    rem.setAttribute("aria-label", "Remover " + nome + " da lista");
-    rem.addEventListener("click", () => mudar(remover(lista, i.id)));
-    const cartao = el("div", { className: "cartao item-lista" }, topo);
-    const o = i.oferta;
-    if (o) {
-      const lojas = formatarLojas(o.lojas);
-      cartao.append(el("p", { className: "muted", textContent: "Melhor: " + String(o.mercado ?? "") + (lojas ? " · " + lojas : "") }));
-      const emb = ehNumero(o.quantidade) && o.unidade ? ` · ${o.quantidade} ${o.unidade}` : "";
-      cartao.append(el("p", { className: "preco-item", textContent: formatarPreco(o.preco) + emb }));
-      if (ehNumero(o.preco_condicional)) {
-        cartao.append(el("p", { className: "muted", textContent: "com condição: " + formatarPreco(o.preco_condicional) + (o.condicao ? " (" + String(o.condicao) + ")" : "") }));
-      }
+    const aberto = abertoId === i.id;
+    const meio = el("button", { type: "button", className: "meio" },
+      el("span", { className: "nome" + (i.pego ? " pego" : ""), textContent: nome }),
+      el("span", { className: "sub", textContent: `${i.qtd}` + (o && o.mercado ? " · " + String(o.mercado) : "") }));
+    botoesMeio.set(i.id, meio);
+    meio.setAttribute("aria-expanded", aberto ? "true" : "false");
+    meio.addEventListener("click", () => {
+      abertoId = abertoId === i.id ? null : i.id;
+      focarId = i.id;
+      desenhar();
+    });
+    const principal = el("div", { className: "item-l" + (i.pego ? " pego-l" : "") },
+      el("span", { className: "caixa" }, caixa), meio,
+      el("span", { className: "p", textContent: o ? centavosParaTexto(centavos(o.preco) * i.qtd) : "" }),
+      botaoTirar(nome, () => mudar(remover(lista, i.id))));
+    const linha = el("div", { className: "item-bloco" }, principal);
+    if (o && ehNumero(o.preco_condicional)) {
+      linha.append(el("p", { className: "sub cond", textContent: "com condição: " + formatarPreco(o.preco_condicional) + (o.condicao ? " (" + String(o.condicao) + ")" : "") }));
     }
-    cartao.append(el("div", { className: "acoes" }, qtd, rem));
-    return cartao;
+    if (aberto) {
+      linha.append(el("div", { className: "qtd qtd-aberta" },
+        botaoPequeno("−", "Diminuir quantidade de " + nome, () => { focarId = i.id; mudar(alterarQuantidade(lista, i.id, i.qtd - 1)); }),
+        el("span", { className: "qtd-valor", textContent: String(i.qtd) }),
+        botaoPequeno("+", "Aumentar quantidade de " + nome, () => { focarId = i.id; mudar(alterarQuantidade(lista, i.id, i.qtd + 1)); })));
+    }
+    return linha;
   }
 
   function desenhar() {
     desenharBusca();
+    $topo.replaceChildren();
+    $entrada.replaceChildren();
     $corpo.replaceChildren();
-    if (!lista.itens.length && !lista.extras.length) {
-      const ir = el("button", { type: "button", className: "botao", textContent: "Ir para a busca" });
-      ir.addEventListener("click", () => { try { $busca.focus(); } catch {} });
-      $corpo.append(el("div", { className: "cartao" }, el("p", { textContent: "Procure um produto acima para montar sua lista" }), el("div", { className: "acoes" }, ir)));
+    botoesMeio.clear();
+    if (vazia()) {
+      $busca.placeholder = "Procurar produto";
+      $entrada.append(el("div", { className: "cartao vazio" },
+        el("p", { className: "vazio-titulo", textContent: "Sua lista está vazia" }),
+        el("p", { className: "muted", textContent: "Procure um produto ou tire foto da sua lista de papel." }),
+        $busca, $slot));
+      if (foto) foto.redesenhar();
       return;
     }
+    $busca.placeholder = "Adicionar produto";
+    $entrada.append(el("div", { className: "linha-entrada" }, $busca, $slot));
+    if (foto) foto.redesenhar();
     const todos = itensDaLista(dados, lista);
     const comOferta = todos.filter((i) => i.oferta);
-    for (const i of comOferta) $corpo.append(linhaItem(i));
 
     const plano = planoDeCompra(dados, lista);
     if (plano.grupos.length) {
-      const bloco = el("div", { className: "cartao" }, el("h3", { textContent: "Onde comprar" }));
+      const bloco = el("div", { className: "cartao resultado" },
+        el("p", { className: "muted", textContent: "Total estimado" }),
+        el("p", { className: "total", textContent: centavosParaTexto(plano.totalCent) }));
       for (const g of plano.grupos) {
-        bloco.append(el("p", { textContent: `Comprar no ${g.mercado}: ${g.itens.map((x) => (x.qtd > 1 ? `${x.qtd}× ` : "") + x.nome).join(", ")}` }));
-        bloco.append(el("p", { className: "muted", textContent: "Subtotal: " + centavosParaTexto(g.subtotalCent) }));
+        bloco.append(el("p", { textContent: `${g.mercado}: ${g.itens.map((x) => (x.qtd > 1 ? `${x.qtd}× ` : "") + x.nome).join(", ")} · ${centavosParaTexto(g.subtotalCent)}` }));
       }
-      bloco.append(el("p", { className: "preco-item", textContent: "Total estimado (melhor de cada): " + centavosParaTexto(plano.totalCent) }));
-      bloco.append(el("p", { className: "muted", textContent: "O melhor mercado é o de menor preço por kg/un; o total soma o preço da embalagem." }));
-      $corpo.append(bloco);
+      const totais = totaisPorMercado(dados, lista);
+      if (totais.length) {
+        const comparar = el("details", { className: "comparar" }, el("summary", { className: "resumo", textContent: "Comparar com um mercado só" }));
+        for (const t of totais) {
+          comparar.append(el("p", { textContent: `${t.mercado}: ${centavosParaTexto(t.totalCent)}` + (t.faltam ? ` (${textoFaltam(t.faltam)})` : "") }));
+        }
+        bloco.append(comparar);
+      }
+      $topo.append(bloco);
     }
-    const totais = totaisPorMercado(dados, lista);
-    if (totais.length) {
-      const bloco = el("div", { className: "cartao" }, el("h3", { textContent: "Se comprar tudo em um só mercado" }));
-      for (const t of totais) {
-        bloco.append(el("p", { textContent: `${t.mercado}: ${centavosParaTexto(t.totalCent)}` + (t.faltam ? ` (${textoFaltam(t.faltam)})` : "") }));
-      }
-      $corpo.append(bloco);
+    if (comOferta.length) {
+      const cartaoItens = el("div", { className: "cartao itens-lista" });
+      for (const i of ordenarItens(comOferta)) cartaoItens.append(linhaItem(i));
+      $corpo.append(cartaoItens);
     }
     const sem = todos.filter((i) => !i.oferta);
     if (sem.length || lista.extras.length) {
-      const bloco = el("div", { className: "cartao sem-lista" }, el("h3", { textContent: "Sem oferta/preço" }), el("p", { className: "muted", textContent: "Ficam fora do total." }));
+      const bloco = el("details", { className: "cartao sem-lista" }, el("summary", { className: "resumo", textContent: `Sem preço agora (${sem.length + lista.extras.length})` }));
       for (const i of sem) {
         const nome = i.nome ?? "Produto não está mais na lista do Radar";
-        const rem = el("button", { type: "button", className: "mini remover", textContent: "Remover" });
-        rem.setAttribute("aria-label", "Remover " + nome + " da lista");
-        rem.addEventListener("click", () => mudar(remover(lista, i.id)));
-        bloco.append(el("div", { className: "linha-busca" }, el("span", { className: "nome" }, nome, el("span", { className: "extra-texto", textContent: `Sem oferta agora · ${i.qtd} un` })), rem));
+        bloco.append(el("div", { className: "linha-busca" }, el("span", { className: "nome" }, nome, el("span", { className: "extra-texto", textContent: `Sem preço agora · ${i.qtd} un` })), botaoTirar(nome, () => mudar(remover(lista, i.id)))));
       }
       for (const x of lista.extras) {
-        const rem = el("button", { type: "button", className: "mini remover", textContent: "Remover" });
-        rem.setAttribute("aria-label", "Remover " + x.texto + " da lista");
-        rem.addEventListener("click", () => mudar(removerExtra(lista, x.texto)));
-        bloco.append(el("div", { className: "linha-busca" }, el("span", { className: "nome" }, x.texto, el("span", { className: "extra-texto", textContent: `Não está no Radar · ${x.qtd} un` })), rem));
+        bloco.append(el("div", { className: "linha-busca" }, el("span", { className: "nome" }, x.texto, el("span", { className: "extra-texto", textContent: `Não está no Radar · ${x.qtd} un` })), botaoTirar(x.texto, () => mudar(removerExtra(lista, x.texto)))));
       }
       $corpo.append(bloco);
     }
-    const limparBtn = el("button", { type: "button", className: "botao sec", textContent: confirmando ? "Limpar mesmo?" : "Limpar lista" });
+    const limparBtn = el("button", { type: "button", className: "link", textContent: confirmando ? "Limpar mesmo?" : "Limpar lista" });
     limparBtn.addEventListener("click", () => {
       if (!confirmando) { confirmando = true; desenhar(); return; }
       mudar(limpar());
     });
     $corpo.append(el("div", { className: "acoes" }, limparBtn));
+    if (foto) {
+      const chave = el("button", { type: "button", className: "link", textContent: "Chave do Gemini" });
+      chave.addEventListener("click", () => foto.abrirChave(chave));
+      $corpo.append(el("div", { className: "acoes" }, chave));
+    }
+    if (focarId !== null) {
+      const alvo = botoesMeio.get(focarId);
+      focarId = null;
+      if (alvo) alvo.focus();
+    }
   }
 
   $busca.addEventListener("input", desenharBusca);
-  $resto.append($aviso, $busca, $resultados, $corpo);
+  $resto.append($aviso, $topo, $entrada, $resultados, $corpo);
   raiz.append(titulo, $foto, $resto);
-  renderListaFoto($foto, ctx, { ...deps, titulo, obterLista: () => lista, alternarResto: (escondido) => { $resto.hidden = escondido; } }, mudar);
+  foto = renderListaFoto($foto, ctx, { ...deps, titulo, slotBotao: $slot, modoBotao: () => (vazia() ? "texto" : "icone"), obterLista: () => lista, alternarResto: (escondido) => { $resto.hidden = escondido; } }, mudar);
   desenhar();
 }

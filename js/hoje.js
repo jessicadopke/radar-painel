@@ -1,4 +1,4 @@
-// Tela Hoje: lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
+// Tela Produtos (arquivo ainda chamado hoje.js): lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
 import { formatarPreco } from "./inicio.js";
 import { cartaoOferta } from "./oferta.js";
 
@@ -67,18 +67,6 @@ export function mercadosDe(dados) {
 }
 
 // ---- textos ----
-export function textoDiferenca(diferenca, situacao) {
-  if (situacao === "sem-oferta") return "Sem oferta agora";
-  if (situacao === "sem-alvo") return "Alvo ainda em cálculo";
-  if (situacao === "no-alvo") return "No alvo";
-  if (!diferenca || !ehNumero(diferenca.valor) || !ehNumero(diferenca.pct)) return "";
-  const dinheiro = formatarPreco(Math.abs(diferenca.valor));
-  const pct = Math.abs(diferenca.pct);
-  if (situacao === "abaixo") return `${dinheiro} abaixo do alvo (−${pct}%)`;
-  if (situacao === "acima") return `${dinheiro} acima do alvo (+${pct}%)`;
-  return "";
-}
-
 // Estado do cartão de oferta: uma frase só ("14% abaixo do alvo"); vazio quando não há o que dizer.
 export function textoEstado(diferenca, situacao) {
   if (situacao === "no-alvo") return "No alvo";
@@ -97,14 +85,14 @@ export function renderHoje(raiz, ctx, deps) {
     e.append(...filhos);
     return e;
   };
-  const titulo = el("h2", { className: "so-leitor", textContent: "Hoje" });
+  const titulo = el("h2", { className: "so-leitor", textContent: "Produtos" });
   const vazio = (texto, botao) => {
     const c = el("div", { className: "cartao" }, el("p", { textContent: texto }));
     if (botao) c.append(el("div", { className: "acoes" }, botao));
     raiz.append(titulo, c);
   };
 
-  if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver as ofertas.", el("a", { className: "botao", href: "#sobre", textContent: "Ir para Sobre" }));
+  if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver as ofertas.", el("a", { className: "botao", href: "#mais", textContent: "Ir para Mais" }));
   if (ctx.estadoDados !== "ok" || !ctx.dados) return vazio("Ainda sem preços. Abra o app com internet uma vez.");
   const total = produtosDe(ctx.dados).length;
   if (!total) return vazio("Nenhum produto na lista ainda.");

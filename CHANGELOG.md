@@ -1,5 +1,25 @@
 # Novidades do Radar
 
+## 0.12.1
+- Textos mais curtos e claros na Lista e na lista por foto: "Sem preço agora" no lugar de "Sem oferta agora"
+- Tela Produto: o topo não mostra mais a frase "Alvo ainda em cálculo"
+- Botões desligados ficam com borda tracejada e texto legível, no tema claro e no escuro
+
+## 0.12.0
+- Início virou um painel: faixa "Minha lista" com quantos itens, mercados e o total (toque abre a Lista), e "Ofertas boas hoje"
+- Agora são 4 abas: Início, Produtos, Lista e Mais. A aba "Hoje" virou "Produtos"
+- A tela Mais junta o que estava em Sobre e Coleta: versão com botão para buscar atualização, tema, situação da coleta, como funciona e novidades
+
+## 0.11.2
+- Lista: cada item ocupa uma linha só, com um × para tirar o item da lista
+- Toque no item para abrir a quantidade e ajustar com − e +
+- "Sem preço agora" fica recolhido e abre quando você quiser
+
+## 0.11.1
+- Lista: o total e o "onde comprar" aparecem primeiro, logo abaixo da busca
+- A câmera virou um ícone ao lado da busca, para tirar a foto da lista sem procurar
+- Lista vazia mostra um só cartão, sem avisos repetidos
+
 ## 0.11.0
 - Gráfico de preços da tela Produto refeito: o preço aparece na ponta da linha, há uma marca para hoje, uma faixa mostra o preço-alvo e, quando há pouco histórico, o gráfico mostra barras
 - Topo mais compacto: um selo mostra se os preços são de hoje, de ontem ou de outra data, e avisa quando você está sem internet

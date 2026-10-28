@@ -3,18 +3,17 @@ import { carregarDados } from "./dados.js";
 import { renderHoje } from "./hoje.js";
 import { renderLista } from "./lista.js";
 import { atualizarChip } from "./frescor.js";
-import { renderColeta } from "./coleta.js";
+import { renderMais } from "./mais.js";
 import { renderProduto } from "./produto.js";
-import { EXPLICACAO, NOME_TEMA, lerTema, gravarTema, proximoTema, lerChangelog } from "./sobre.js";
+import { rota } from "./rotas.js";
 import { renderInicio, lerVisitaAnterior, gravarVisita } from "./inicio.js";
 
-const VERSION = "0.11.0";
+const VERSION = "0.12.1";
 const PREFIXO_CACHE = "radar-";
 
 const $tela = document.getElementById("tela");
 const $atualizado = document.getElementById("atualizado");
 const $avisoVelho = document.getElementById("aviso-velho");
-const ABAS = ["inicio", "hoje", "lista", "coleta", "sobre"];
 
 let dados = null;
 let estadoDados = "sem-dados";
@@ -24,37 +23,16 @@ let registro = null;
 const storage = (() => { try { return window.localStorage; } catch { return null; } })();
 const visitaAnterior = storage ? lerVisitaAnterior(storage) : null;
 
-function el(tag, props = {}, ...filhos) {
-  const e = document.createElement(tag);
-  Object.assign(e, props);
-  e.append(...filhos);
-  return e;
-}
-
 // Pontos de entrada das telas: #13 a #16 só substituem estas funções (raiz, contexto).
 export const telas = {
   inicio: telaInicio,
-  hoje: telaHoje,
+  produtos: telaProdutos,
   lista: telaLista,
-  coleta: telaColeta,
-  sobre: telaSobre,
+  mais: telaMais,
   produto: telaProduto,
 };
 
-// ---- roteador (hash) ----
-function decodificar(t) {
-  try { return decodeURIComponent(t); } catch { return t; }
-}
-
-export function rota(hash) {
-  const h = String(hash || "").replace(/^#/, "");
-  const [nome, ...resto] = h.split("/");
-  if (nome === "produto") {
-    return telas.produto && resto[0] ? { tela: "produto", aba: "hoje", id: decodificar(resto[0]) } : { tela: "hoje", aba: "hoje" };
-  }
-  return ABAS.includes(nome) ? { tela: nome, aba: nome } : { tela: "inicio", aba: "inicio" };
-}
-
+// ---- roteador (hash): a função rota() fica em rotas.js ----
 function mostrar() {
   const r = rota(location.hash);
   $tela.replaceChildren();
@@ -85,7 +63,7 @@ function conferirFrescor() {
   const dadosOk = estadoDados === "ok" ? dados : null;
   if (estadoDados === "atualize") {
     $atualizado.hidden = true;
-    $avisoVelho.textContent = "Há uma versão nova. Toque em Sobre, depois em Buscar atualização.";
+    $avisoVelho.textContent = "Há uma versão nova. Toque em Mais, depois em Buscar.";
     $avisoVelho.hidden = false;
     return;
   }
@@ -135,13 +113,13 @@ function hojeIso() {
 }
 
 function telaInicio(raiz, ctx) {
-  renderInicio(raiz, ctx, { document, visitaAnterior, hojeIso: hojeIso(), linkProduto: Boolean(telas.produto) });
+  renderInicio(raiz, ctx, { document, visitaAnterior, hojeIso: hojeIso(), linkProduto: Boolean(telas.produto), storage });
 }
 
-// filtros da tela Hoje: só em memória (sobrevivem à troca de aba, somem ao reabrir o app)
-const filtrosHoje = { busca: "", categoria: "", mercado: "" };
-function telaHoje(raiz, ctx) {
-  renderHoje(raiz, ctx, { document, filtros: filtrosHoje, linkProduto: Boolean(telas.produto) });
+// filtros da tela Produtos: só em memória (sobrevivem à troca de aba, somem ao reabrir o app)
+const filtrosProdutos = { busca: "", categoria: "", mercado: "" };
+function telaProdutos(raiz, ctx) {
+  renderHoje(raiz, ctx, { document, filtros: filtrosProdutos, linkProduto: Boolean(telas.produto) });
 }
 
 // Rede e câmera da lista por foto entram aqui; lista.js e lista_foto.js nunca chamam o fetch direto.
@@ -156,10 +134,6 @@ function telaLista(raiz, ctx) {
   renderLista(raiz, ctx, { document, storage, window, gemini });
 }
 
-function telaColeta(raiz, ctx) {
-  renderColeta(raiz, ctx, { document, agora: new Date() });
-}
-
 function telaProduto(raiz, ctx) {
   renderProduto(raiz, ctx, { document });
 }
@@ -170,73 +144,19 @@ function guardarVisita() {
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") guardarVisita(); });
 window.addEventListener("pagehide", guardarVisita);
 
-function telaSobre(raiz) {
-  const msg = el("p", { className: "muted", textContent: "", role: "status" });
-  const buscar = el("button", { type: "button", className: "botao", textContent: "Buscar atualização" });
-  const instalar = el("button", { type: "button", className: "botao sec", textContent: "Instalar", hidden: !eventoInstalar });
-  buscar.addEventListener("click", async () => {
-    msg.textContent = "Buscando…";
-    const r = await checkUpdate();
-    if (r.erro) msg.textContent = "Não consegui verificar agora. Tente de novo com internet.";
-    else if (r.nova) {
-      msg.textContent = `A versão ${r.version} está disponível.`;
-      const ir = el("button", { type: "button", className: "botao", textContent: "Atualizar" });
-      ir.addEventListener("click", applyUpdate);
-      buscar.after(ir);
-    } else msg.textContent = `Você está na versão atual (${VERSION}).`;
+function telaMais(raiz, ctx) {
+  renderMais(raiz, ctx, {
+    document, storage, VERSION, checkUpdate, applyUpdate, gemini, agora: new Date(),
+    buscar: (url, init) => fetch(url, init),
+    eventoInstalar: () => eventoInstalar,
+    aoInstalar: () => { eventoInstalar = null; },
   });
-  instalar.addEventListener("click", async () => {
-    if (!eventoInstalar) return;
-    eventoInstalar.prompt();
-    await eventoInstalar.userChoice;
-    eventoInstalar = null;
-    instalar.hidden = true;
-  });
-  const tema = el("button", { type: "button", className: "botao sec" });
-  const mostrarTema = () => { tema.textContent = "Tema: " + NOME_TEMA[lerTema(storage)]; };
-  tema.addEventListener("click", () => {
-    const t = gravarTema(storage, proximoTema(lerTema(storage)));
-    if (t === "auto") document.documentElement.removeAttribute("data-theme");
-    else document.documentElement.setAttribute("data-theme", t);
-    mostrarTema();
-  });
-  mostrarTema();
-  const novidades = el("div", { className: "cartao" }, el("h3", { textContent: "Novidades" }), el("p", { className: "muted", textContent: "Carregando…" }));
-  carregarNovidades(novidades);
-  raiz.append(
-    el("h2", { className: "so-leitor", textContent: "Sobre o app" }),
-    el("div", { className: "cartao" },
-      el("p", { textContent: "Radar — ofertas dos mercados de Palmas." }),
-      el("p", { className: "muted", textContent: "Versão " + VERSION }),
-      msg,
-      el("div", { className: "acoes" }, buscar, instalar, tema)),
-    el("div", { className: "cartao" },
-      el("h3", { textContent: "Como funciona" }),
-      ...EXPLICACAO.map((t) => el("p", { textContent: t }))),
-    novidades,
-  );
-}
-
-async function carregarNovidades(caixa) {
-  const p = caixa.querySelector("p");
-  try {
-    const resp = await fetch("CHANGELOG.md", { cache: "no-cache" });
-    if (!resp.ok) throw new Error("http");
-    const versoes = lerChangelog(await resp.text()).slice(0, 5);
-    if (!versoes.length) throw new Error("vazio");
-    p.remove();
-    for (const v of versoes) {
-      caixa.append(el("h4", { textContent: "Versão " + v.versao }), el("ul", {}, ...v.itens.map((i) => el("li", { textContent: i }))));
-    }
-  } catch {
-    p.textContent = "Não consegui carregar as novidades agora.";
-  }
 }
 
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   eventoInstalar = e;
-  if (rota(location.hash).tela === "sobre") mostrar();
+  if (rota(location.hash).tela === "mais") mostrar();
 });
 
 // ---- início ----

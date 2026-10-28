@@ -1,6 +1,6 @@
 // Tela Produto: lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
 import { formatarPreco, formatarLojas, formatarValidade } from "./inicio.js";
-import { situacaoDe, textoDiferenca, textoEstado } from "./hoje.js";
+import { situacaoDe, textoEstado } from "./hoje.js";
 import { renderGrafico, tituloGrafico } from "./grafico.js";
 
 const ehNumero = (n) => typeof n === "number" && Number.isFinite(n);
@@ -17,20 +17,6 @@ export function ofertasDoProduto(produto) {
     const { situacao, diferenca } = situacaoDe(oferta, produto.alvo);
     return { oferta, diferenca, situacao, maisBarato: i === 0 };
   });
-}
-
-export function textoAlvo(alvo, parametros) {
-  const par = parametros && typeof parametros === "object" ? parametros : {};
-  const a = alvo && typeof alvo === "object" ? alvo : {};
-  if (ehNumero(a.valor) && a.suficiente !== false) {
-    const dias = ehNumero(par.janela_dias) ? par.janela_dias : 90;
-    return `Alvo: ${formatarPreco(a.valor)} (preço típico bom dos últimos ${dias} dias)`;
-  }
-  if (ehNumero(a.dias) && ehNumero(par.minimo_dias)) {
-    const faltam = Math.max(1, par.minimo_dias - a.dias);
-    return `Alvo ainda em cálculo (faltam ${faltam} ${faltam === 1 ? "dia" : "dias"} de histórico)`;
-  }
-  return "Alvo ainda em cálculo";
 }
 
 const sufixoMedida = (medida) => (medida ? ` / ${medida}` : "");
@@ -81,15 +67,15 @@ export function renderProduto(raiz, ctx, deps) {
     e.append(...filhos);
     return e;
   };
-  const voltar = el("a", { className: "voltar", href: "#hoje", textContent: "← Produtos" });
+  const voltar = el("a", { className: "voltar", href: "#produtos", textContent: "← Produtos" });
   const vazio = (texto, botao) => {
     const c = el("div", { className: "cartao" }, el("p", { textContent: texto }));
     if (botao) c.append(el("div", { className: "acoes" }, botao));
     raiz.append(voltar, c);
   };
-  const irHoje = () => el("a", { className: "botao", href: "#hoje", textContent: "Ir para Produtos" });
+  const irHoje = () => el("a", { className: "botao", href: "#produtos", textContent: "Ir para Produtos" });
 
-  if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver as ofertas.", el("a", { className: "botao", href: "#sobre", textContent: "Ir para Sobre" }));
+  if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver as ofertas.", el("a", { className: "botao", href: "#mais", textContent: "Ir para Mais" }));
   if (ctx.estadoDados !== "ok" || !ctx.dados) return vazio("Ainda sem preços. Abra o app com internet uma vez.", irHoje());
   const produto = acharProduto(ctx.dados, ctx.rota && ctx.rota.id);
   if (!produto) return vazio("Não achei esse produto na lista de hoje.", irHoje());
@@ -142,7 +128,6 @@ function heroi(l, produto, nome, medida, el) {
   const caixa = el("section", { className: "heroi" }, el("p", { className: "cima", textContent: "Mais barato hoje" }), el("div", { className: "linha" }, meio, et));
   let fim = textoEstado(l.diferenca, l.situacao);
   if (fim && ehNumero(produto.alvo && produto.alvo.valor)) fim += ` (${formatarPreco(produto.alvo.valor)})`;
-  else if (l.situacao === "sem-alvo") fim = "Alvo ainda em cálculo";
   if (fim) caixa.append(el("p", { className: "fim", textContent: fim }));
   const cond = textoCondicao(o, medida);
   if (cond) caixa.append(el("p", { className: "muted", textContent: cond }));

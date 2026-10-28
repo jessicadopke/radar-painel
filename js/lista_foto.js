@@ -22,7 +22,6 @@ export function aplicarNaLista(lista, linhas, modo) {
 }
 
 // ---- textos ----
-export const TEXTO_PRIVACIDADE = "A foto é enviada ao Google (Gemini) só para ler a lista. O Radar não guarda a foto. No plano gratuito o Google pode usar o conteúdo para melhorar seus serviços.";
 const ICONES = {
   camera: ["M4 8h3l2-3h6l2 3h3v11H4z", "M12 9.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 0 0 0-7z"],
   galeria: ["M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z", "M9 8.2a1.8 1.8 0 1 0 0 3.6a1.8 1.8 0 0 0 0-3.6z", "M4 18l5-5 4 4 3-3 4 4"],
@@ -49,7 +48,8 @@ const BOTOES = {
 const textoItens = (n) => (n === 1 ? "1 item" : n + " itens");
 const textoTentativas = (n) => (n === 1 ? "1 tentativa" : n + " tentativas");
 
-// deps = { document, storage, window?, gemini: {buscar, criarBitmap, online(), hoje()}, obterLista(), titulo?, alternarResto?(escondido) }
+// deps = { document, storage, window?, gemini: {buscar, criarBitmap, online(), hoje()}, obterLista(), titulo?, alternarResto?(escondido), slotBotao?, modoBotao?: "icone"|"texto"|() => ... }
+// Devolve { redesenhar(), abrirChave(disparador) } (ou undefined sem gemini).
 export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
   const g = deps && deps.gemini;
   if (!g) return;
@@ -94,7 +94,7 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
 
   // ---- estado em memória ----
   let foto = null; // { base64 }: só na memória, sai ao terminar a leitura
-  let origem = "galeria";
+  let origem = "arquivo";
   let comoFoiLido = null; // { modelo, tentativas, ms }
   let controle = null;
   let cancelado = false;
@@ -200,35 +200,25 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
   // ---- entrada ----
   const online = () => { try { return g.online() !== false; } catch { return true; } };
 
-  function cartaoEntrada() {
-    const cartao = el("div", { className: "cartao foto-entrada" }, el("h3", { textContent: "Criar lista por foto" }));
-    if (!dados) {
-      cartao.append(el("p", { textContent: "Abra o app com internet uma vez" }));
-      const acoes = el("div", { className: "acoes" });
-      for (const [rot, ic, cls, aria] of [["Tirar foto", "camera", "botao", "Tirar foto da lista"], ["Escolher da galeria", "galeria", "botao sec", "Escolher foto da lista na galeria"]]) {
-        const b = botao(rot, cls, () => {}, aria);
-        b.disabled = true;
-        b.setAttribute("aria-disabled", "true");
-        b.prepend(icone(ic, "foto-ico"));
-        acoes.append(b);
-      }
-      cartao.append(acoes);
-      return cartao;
-    }
-    if (!online()) {
-      cartao.append(el("p", { className: "aviso", role: "status", textContent: MENSAGENS["sem-rede"] }), el("div", { className: "acoes" }, botao("Digitar a lista", "botao", () => digitar())));
-      return cartao;
-    }
-    cartao.append(el("p", { textContent: "Fotografe sua lista de papel e veja onde comprar cada item." }));
-    const camera = botao("Tirar foto", "botao", () => iniciar("camera"), "Tirar foto da lista");
-    const galeria = botao("Escolher da galeria", "botao sec", () => iniciar("galeria"), "Escolher foto da lista na galeria");
-    camera.prepend(icone("camera", "foto-ico"));
-    galeria.prepend(icone("galeria", "foto-ico"));
-    if (ocupado) { camera.disabled = true; galeria.disabled = true; }
-    cartao.append(el("div", { className: "acoes" }, camera, galeria));
-    cartao.append(el("p", { className: "foto-privacidade", textContent: TEXTO_PRIVACIDADE }));
-    cartao.append(botao("Chave do Gemini", "link", () => dialogoChave()));
-    return cartao;
+  // Botão da câmera (criado uma vez por modo, para o foco voltar a ele) e avisos de sem dados / sem internet.
+  const botaoIcone = botao("", "mini foto-camera", () => iniciar(), "Ler lista de papel");
+  botaoIcone.append(icone("camera", "foto-ico"));
+  const botaoTexto = botao("Ler lista de papel", "botao foto-camera-texto", () => iniciar());
+  botaoTexto.prepend(icone("camera", "foto-ico"));
+  const $entrada = el("div", { className: "foto-entrada-aviso" });
+  const slot = deps.slotBotao || el("div", { className: "foto-slot" });
+
+  function desenharEntrada() {
+    const texto = (typeof deps.modoBotao === "function" ? deps.modoBotao() : deps.modoBotao) === "texto";
+    const b = texto ? botaoTexto : botaoIcone;
+    const desligado = !dados || !online() || ocupado;
+    b.disabled = desligado;
+    b.setAttribute("aria-disabled", desligado ? "true" : "false");
+    slot.replaceChildren();
+    slot.append(b);
+    $entrada.replaceChildren();
+    if (!dados) $entrada.append(el("p", { className: "muted", textContent: "Abra o app com internet uma vez" }));
+    else if (!online() && !ocupado) $entrada.append(el("div", { className: "cartao" }, el("p", { className: "aviso", role: "status", textContent: MENSAGENS["sem-rede"] }), el("div", { className: "acoes" }, botao("Digitar a lista", "botao", () => digitar()))));
   }
 
   function blocoComoFoiLido() {
@@ -238,10 +228,12 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
       el("p", { textContent: `Modelo: ${c.modelo} · ${textoTentativas(c.tentativas)} · ${Math.max(0, Math.round(c.ms / 1000))} s` }));
   }
 
-  function mostrarEntrada(extra) {
+  function mostrarEntrada(extra, focarBotao = false) {
     ocupado = false;
     if (deps.alternarResto) deps.alternarResto(false);
-    host.replaceChildren(cartaoEntrada());
+    host.replaceChildren();
+    desenharEntrada();
+    if (focarBotao) foco(slot.children[0]);
     if (extra) host.append(extra);
     const c = blocoComoFoiLido();
     if (c) host.append(c);
@@ -273,7 +265,7 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
     if (inputs[tipo]) return inputs[tipo];
     const inp = el("input", { type: "file", hidden: true });
     inp.setAttribute("accept", "image/*");
-    if (tipo === "camera") inp.setAttribute("capture", "environment");
+    if (tipo === "camera") inp.setAttribute("capture", "environment"); // só para "Tirar foto" do erro de formato
     inp.setAttribute("aria-hidden", "true");
     inp.setAttribute("tabindex", "-1");
     inp.addEventListener("change", () => {
@@ -291,13 +283,13 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
     try { entradaArquivo(qual).click(); } catch {}
   }
 
-  async function iniciar(qual) {
-    if (ocupado || !dados) return;
+  async function iniciar() {
+    if (ocupado || !dados || !online()) return;
     if (!lerChave(storage).aviso) {
       const ok = await dialogoAviso();
       if (!ok) return;
     }
-    abrirSeletor(qual);
+    abrirSeletor("arquivo");
   }
 
   function tentarDeNovo() {
@@ -316,7 +308,8 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
     const andamento = el("div", { className: "cartao foto-andamento" }, status, barra,
       el("p", { className: "muted", textContent: "Pode levar até 30 segundos." }), el("div", { className: "acoes" }, cancelar));
     andamento.setAttribute("aria-busy", "true");
-    host.replaceChildren(cartaoEntrada(), andamento);
+    host.replaceChildren(andamento);
+    desenharEntrada();
   }
 
   async function processar(arquivo) {
@@ -328,12 +321,12 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
     comoFoiLido = null;
     mostrarLendo();
     const r = await reduzirImagem(arquivo, { document: doc, criarBitmap: g.criarBitmap });
-    if (cancelado) { mostrarEntrada(); return; }
+    if (cancelado) { mostrarEntrada(null, true); return; }
     if (!r.ok) { mostrarErro("formato", r.mensagem); return; }
     foto = { base64: r.base64 };
     if (!lerChave(storage).chave) {
       const ok = await dialogoChave();
-      if (!ok || !lerChave(storage).chave) { foto = null; mostrarEntrada(); return; }
+      if (!ok || !lerChave(storage).chave) { foto = null; mostrarEntrada(null, true); return; }
     }
     await ler();
   }
@@ -346,7 +339,7 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
     controle = new AbortController();
     const r = await lerFoto(foto, { chave, buscar: g.buscar, hoje: g.hoje(), online: online(), sinal: controle.signal });
     controle = null;
-    if (r.motivo === "cancelado" || cancelado) { foto = null; mostrarEntrada(); return; }
+    if (r.motivo === "cancelado" || cancelado) { foto = null; mostrarEntrada(null, true); return; }
     comoFoiLido = r.ok ? { modelo: r.modelo, tentativas: r.tentativas.length, ms: r.ms } : null;
     if (!r.ok) {
       if (r.motivo === "sem-chave") { const ok = await dialogoChave(); if (ok) return ler(); }
@@ -393,7 +386,7 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
       if (focoLinha === l.id) focoEl = campoTexto;
     }
     const pendentes = linhas.filter((l) => !l.produtoId && !l.manual && l.certeza === "confira").length;
-    if (pendentes) pedacos.push(el("p", { className: "muted", textContent: `${textoItens(pendentes)} em “Confira”: sem escolher o produto, vão para “Sem oferta/preço”.` }));
+    if (pendentes) pedacos.push(el("p", { className: "muted", textContent: `${textoItens(pendentes)} em “Confira”: sem escolher o produto, vão para “Sem preço agora”.` }));
     pedacos.push(el("div", { className: "acoes" },
       botao("Acrescentar item", "botao sec", () => acrescentar()),
       botao("Refazer a foto", "botao sec", () => { linhas = []; mostrarEntrada(); abrirSeletor(origem); })));
@@ -547,5 +540,11 @@ export function renderListaFoto(raiz, ctx, deps, aoAplicar) {
     deps.window.addEventListener("online", refazer);
     deps.window.addEventListener("offline", refazer);
   }
+  raiz.append($entrada);
+  if (!deps.slotBotao) raiz.append(slot);
   mostrarEntrada();
+  return {
+    redesenhar: () => { if (!ocupado) desenharEntrada(); },
+    abrirChave: (disparador) => { if (disparador) ultimoBotao = disparador; return dialogoChave(); },
+  };
 }

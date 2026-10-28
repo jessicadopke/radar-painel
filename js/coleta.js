@@ -1,6 +1,6 @@
-// Tela Coleta: lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
+// Situação da coleta (bloco da tela Mais): lógica pura, sem DOM. Nenhuma função lança exceção.
 // Usa só o que o dados.json formato 1 traz em "coleta" (sem mensagem de erro, sem logs, sem caminhos).
-import { formatarGeradoEm, minutosIso as minutos } from "./dados.js";
+import { minutosIso as minutos } from "./dados.js";
 import { HORAS_PARADA, situacaoFrescor } from "./frescor.js";
 
 export { HORAS_PARADA };
@@ -23,20 +23,6 @@ export function situacaoFonte(fonte, geradoEm) {
   return "ok";
 }
 
-const ROTULOS = {
-  ok: "Coletou normalmente",
-  erro: "Falhou na última coleta",
-  parada: "Sem coletar há mais de 26 horas",
-  nunca: "Ainda não coletou",
-  desligada: "Desligada",
-};
-export const textoSituacao = (s) => ROTULOS[s] ?? ROTULOS.nunca;
-
-export function textoImagens(n) {
-  if (typeof n !== "number" || !Number.isFinite(n)) return "";
-  return n === 1 ? "1 imagem nova" : `${n} imagens novas`;
-}
-
 // Fontes na ordem do arquivo, com situação; ligadas com problema vêm primeiro.
 export function fontesParaTela(dados) {
   const lista = dados && dados.coleta && Array.isArray(dados.coleta.fontes) ? dados.coleta.fontes : [];
@@ -44,78 +30,32 @@ export function fontesParaTela(dados) {
   const peso = { erro: 0, parada: 0, nunca: 1, ok: 2, desligada: 3 };
   return lista.filter((f) => f && typeof f === "object").map((f, i) => {
     const situacao = situacaoFonte(f, geradoEm);
-    return { fonte: f.fonte, nome: nomeFonte(f.fonte), situacao, texto: textoSituacao(situacao),
-      terminadaEm: f.terminada_em ?? null, imagens: textoImagens(f.novas_imagens), i };
+    return { fonte: f.fonte, nome: nomeFonte(f.fonte), situacao, terminadaEm: f.terminada_em ?? null, i };
   }).sort((a, b) => peso[a.situacao] - peso[b.situacao] || a.i - b.i);
 }
 
-// Ofertas vigentes no arquivo, por mercado (ordem alfabética).
-export function ofertasPorMercado(dados) {
-  const produtos = dados && Array.isArray(dados.produtos) ? dados.produtos : [];
-  const cont = new Map();
-  let total = 0;
-  for (const p of produtos) {
-    if (!p || !Array.isArray(p.ofertas)) continue;
-    for (const o of p.ofertas) {
-      if (!o || typeof o !== "object") continue;
-      const m = String(o.mercado ?? "") || "Outro";
-      cont.set(m, (cont.get(m) ?? 0) + 1);
-      total += 1;
-    }
-  }
-  const mercados = [...cont].map(([mercado, n]) => ({ mercado, n })).sort((a, b) => a.mercado.localeCompare(b.mercado, "pt-BR"));
-  return { total, mercados };
+// "Assaí · coletou hoje, 12:00". `f` é um item de fontesParaTela; `agora` é a hora do aparelho.
+export function linhaFonte(f, agora) {
+  const { nome, situacao, terminadaEm } = f;
+  const dois = (n) => String(n).padStart(2, "0");
+  const dia = (d) => `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`;
+  const m = /^(\d{4}-(\d{2})-(\d{2}))T(\d{2}:\d{2})/.exec(String(terminadaEm ?? ""));
+  let texto;
+  if (situacao === "desligada") texto = "desligada";
+  else if (situacao === "nunca") texto = "ainda sem coleta";
+  else if (situacao === "erro") texto = "falhou na última coleta";
+  else if (situacao === "parada") texto = "sem coletar há mais de 26 horas";
+  else if (!m) texto = "coletou";
+  else if (!(agora instanceof Date) || Number.isNaN(agora.getTime())) texto = `coletou em ${m[3]}/${m[2]}`;
+  else if (m[1] === dia(agora)) texto = `coletou hoje, ${m[4]}`;
+  else if (m[1] === dia(new Date(agora.getFullYear(), agora.getMonth(), agora.getDate() - 1))) texto = `coletou ontem, ${m[4]}`;
+  else texto = `coletou em ${m[3]}/${m[2]}`;
+  return `${nome} · ${texto}`;
 }
 
-export function textoQuando(iso) {
-  const t = formatarGeradoEm(iso);
-  return t ? `Última coleta: ${t}` : "Ainda sem coleta registrada";
-}
-
-// ---- DOM ----
-// deps: { document }
-export function renderColeta(raiz, ctx, deps) {
-  const doc = deps.document;
-  const el = (tag, props = {}, ...filhos) => {
-    const e = doc.createElement(tag);
-    Object.assign(e, props);
-    e.append(...filhos);
-    return e;
-  };
-  raiz.append(el("h2", { className: "so-leitor", textContent: "Coleta" }));
-  const aviso = (texto, link) => {
-    const c = el("div", { className: "cartao" }, el("p", { textContent: texto }));
-    if (link) c.append(el("div", { className: "acoes" }, link));
-    raiz.append(c);
-  };
-  if (ctx.estadoDados === "atualize") return aviso("Atualize o app para ver a coleta.", el("a", { className: "botao", href: "#sobre", textContent: "Ir para Sobre" }));
-  if (ctx.estadoDados !== "ok" || !ctx.dados) return aviso("Ainda sem preços. Abra o app com internet uma vez.");
-
-  const dados = ctx.dados;
-  raiz.append(el("p", { className: "muted", textContent: textoQuando(dados.coleta && dados.coleta.ultima_execucao_em) }));
-  if (deps.agora && situacaoFrescor(dados.gerado_em, deps.agora).estado === "velho") {
-    raiz.append(el("p", { className: "muted", textContent: "O computador da coleta pode estar desligado." }));
-  }
-  const fontes = fontesParaTela(dados);
-  if (!fontes.length) aviso("Nenhuma fonte registrada ainda.");
-  for (const f of fontes) {
-    const secao = el("section", { className: `cartao fonte fonte-${f.situacao}` });
-    const idTitulo = `fonte-${f.fonte}`;
-    secao.setAttribute("aria-labelledby", idTitulo);
-    const cab = el("div", { className: "cab-oferta" }, el("h3", { id: idTitulo, textContent: f.nome }),
-      el("span", { className: `selo-fonte ${f.situacao}`, textContent: f.texto }));
-    secao.append(cab);
-    if (f.situacao !== "desligada" && f.situacao !== "nunca") {
-      const q = formatarGeradoEm(f.terminadaEm);
-      if (q) secao.append(el("p", { className: "muted", textContent: `Terminou em ${q}` }));
-      if (f.imagens) secao.append(el("p", { className: "muted", textContent: f.imagens }));
-    }
-    if (f.situacao === "erro") secao.append(el("p", { textContent: "Os preços desta fonte podem estar velhos. A Jéssica confere no PC." }));
-    raiz.append(secao);
-  }
-  const { total, mercados } = ofertasPorMercado(dados);
-  const c = el("section", { className: "cartao" }, el("h3", { textContent: "Ofertas no ar hoje" }),
-    el("p", { textContent: total === 1 ? "1 oferta vigente" : `${total} ofertas vigentes` }));
-  for (const m of mercados) c.append(el("p", { className: "muted", textContent: `${m.mercado}: ${m.n}` }));
-  raiz.append(c);
+// Algo parado? Fonte ligada com erro ou parada, ou dados com mais de 26 h (computador pode estar desligado).
+export function coletaPrecisaAtencao(dados, agora) {
+  if (!dados || typeof dados !== "object") return false;
+  if (fontesParaTela(dados).some((f) => f.situacao === "erro" || f.situacao === "parada")) return true;
+  return situacaoFrescor(dados.gerado_em, agora).estado === "velho";
 }
