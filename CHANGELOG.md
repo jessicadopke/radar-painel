@@ -1,5 +1,10 @@
 # Novidades do Radar
 
+## 1.0.0
+- Primeira versão estável do Radar de Preços Palmas. A partir daqui, o número de versão é o do projeto inteiro: coleta, histórico e este app
+- Mudou: o Instagram passa a ser coletado duas vezes por dia (12h e 21h), e o perfil do Atacadão é o oficial
+- Corrigido: um perfil do Instagram que demora demais deixa de derrubar a coleta; os perfis seguintes continuam sendo lidos
+
 ## 0.14.2
 - Mudou: refrigerante e cerveja agora têm um produto por marca e por tamanho. Coca-Cola de 2 L, Coca-Cola de lata e Coca-Cola de 600 ml aparecem separadas, e a comparação de preço continua por litro
 - Mudou: quando o nome do produto não informa o tamanho, ele fica em "(outros tamanhos)" da marca, em vez de misturar com as outras embalagens
