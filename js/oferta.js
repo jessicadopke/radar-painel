@@ -83,6 +83,10 @@ export function ofertaDoAlerta(dados, alerta) {
 // ---- marca do produto (#129) ----
 const semAcento = (t) => String(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
 
+const PREPOSICOES = new Set(["de", "da", "do", "dos", "das", "e"]);
+// Chave de comparação: sem acento, sem caixa e com pontuação como espaço ("Coca Cola" = "Coca-Cola").
+const chaveMarca = (t) => semAcento(t).replace(/[^a-z0-9]+/g, " ").trim();
+
 // Caixa uniforme sem mexer na grafia mista: só normaliza marca toda em maiúsculas ou toda em minúsculas
 // (primeira letra de cada palavra e depois de hífen). "Coca-Cola", "ypê Mix" mistos ficam como vieram;
 // sigla de uma palavra só com até 3 letras ("BRF") fica em maiúsculas.
@@ -93,16 +97,19 @@ export function normalizarMarca(marca) {
   const maiuscula = t === t.toUpperCase(), minuscula = t === t.toLowerCase();
   if (!maiuscula && !minuscula) return t;
   if (maiuscula && /^\p{L}{1,3}$/u.test(t)) return t;
-  return t.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (_, sep, letra) => sep + letra.toUpperCase());
+  // preposições ficam em minúsculas no meio da marca; ponto e apóstrofo também iniciam palavra (M.Dias, D'Or)
+  return t.toLowerCase().replace(/(^|[\s\-.'’])(\p{L}+)/gu, (tudo, sep, palavra, pos) =>
+    pos > 0 && /\s/.test(sep) && PREPOSICOES.has(palavra) ? tudo : sep + palavra[0].toUpperCase() + palavra.slice(1));
 }
 
 // Marca a exibir antes do mercado; "" quando não há marca ou quando o nome do produto exibido já a contém.
 export function marcaParaMostrar(marca, nomeProduto) {
   const m = normalizarMarca(marca);
   if (!m) return "";
-  const chave = semAcento(m);
+  const chave = chaveMarca(m);
   if (!chave) return "";
-  return semAcento(nomeProduto ?? "").includes(chave) ? "" : m;
+  // limite de palavra: "Sol" não some em "Solução"
+  return (" " + chaveMarca(nomeProduto ?? "") + " ").includes(" " + chave + " ") ? "" : m;
 }
 
 // Nós do rótulo "Marca · resto": a marca num <span class="marca"> (nunca quebra no meio) e o resto como texto.
@@ -110,5 +117,5 @@ export function rotuloComMarca(el, marca, nomeProduto, resto) {
   const m = marcaParaMostrar(marca, nomeProduto);
   const fim = resto == null ? "" : String(resto);
   if (!m) return fim ? [fim] : [];
-  return fim ? [el("span", { className: "marca-prod", textContent: m }), " · " + fim] : [el("span", { className: "marca", textContent: m })];
+  return fim ? [el("span", { className: "marca-prod", textContent: m }), " · " + fim] : [el("span", { className: "marca-prod", textContent: m })];
 }

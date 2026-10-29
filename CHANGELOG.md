@@ -1,5 +1,14 @@
 # Novidades do Radar
 
+## 0.14.2
+- Mudou: refrigerante e cerveja agora têm um produto por marca e por tamanho. Coca-Cola de 2 L, Coca-Cola de lata e Coca-Cola de 600 ml aparecem separadas, e a comparação de preço continua por litro
+- Mudou: quando o nome do produto não informa o tamanho, ele fica em "(outros tamanhos)" da marca, em vez de misturar com as outras embalagens
+
+## 0.14.1
+- Corrigido: a marca some do cartão só quando é o próprio nome do produto, então uma marca que aparece dentro de outra palavra (como "Sol" em "Solução") continua aparecendo
+- Corrigido: "Coca Cola" e "Coca-Cola" não aparecem repetidas no mesmo cartão, e marcas compostas ficam com a grafia certa, com preposições em minúscula
+- Mudou: refrigerantes e cervejas agora são separados pela embalagem. Refrigerante de 2 L aparece como "Coca-Cola (2 L)", e cerveja de lata como "Amstel (lata)". Cerveja de garrafa, long neck e de 600 ml ou 1 L vai para "Cerveja (garrafa)", e não fica mais junto das latas
+
 ## 0.14.0
 - A marca do produto aparece junto do mercado nos cartões de oferta e na tela Produto, como "Coca-Cola · Atacadão". No arroz também: cada oferta mostra a sua marca
 
