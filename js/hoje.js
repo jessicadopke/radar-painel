@@ -1,6 +1,6 @@
 // Tela Produtos (arquivo ainda chamado hoje.js): lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
 import { formatarPreco } from "./inicio.js";
-import { cartaoOferta } from "./oferta.js";
+import { cartaoOferta, precoDaOferta } from "./oferta.js";
 
 export function normalizar(texto) {
   if (texto == null) return "";
@@ -154,8 +154,10 @@ export function renderHoje(raiz, ctx, deps) {
 
 function cartao(i, deps, el) {
   const o = i.oferta;
+  const pc = o ? precoDaOferta(o, i.medida) : null;
   return cartaoOferta(el, {
-    id: i.id, nome: i.nome, mercado: o && o.mercado, lojas: o && o.lojas, preco: o && o.preco_medida,
+    pacote: pc && pc.modo === "pacote" ? { preco: pc.principal, embalagem: pc.embalagem } : undefined,
+    id: i.id, nome: i.nome, marca: o ? o.marca : undefined, mercado: o && o.mercado, lojas: o && o.lojas, preco: o && o.preco_medida,
     medida: i.medida, situacao: i.situacao, texto: textoEstado(i.diferenca, i.situacao), link: deps.linkProduto,
   });
 }

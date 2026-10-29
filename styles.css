@@ -133,6 +133,7 @@ a.oferta:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 .oferta .meio { flex: 1; min-width: 0; }
 .oferta .nome { font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.05rem; overflow-wrap: anywhere; }
 .oferta .sub { color: var(--muted); font-size: 0.9rem; }
+.oferta .sub .marca-prod { white-space: nowrap; }
 .oferta .estado { font-size: 0.9rem; font-weight: 700; }
 .preco-et { flex: none; font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.25rem; font-variant-numeric: tabular-nums; color: var(--brand); text-align: right; white-space: nowrap; }
 .preco-et small { display: block; font: 400 0.8rem var(--fonte-texto); color: var(--muted); }
@@ -140,6 +141,12 @@ a.oferta:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 .preco-et.bom small { color: var(--on-good); }
 .oferta.sem { background: transparent; border-style: dashed; min-height: 48px; }
 .oferta.sem .nome { color: var(--muted); }
+/* Preço do pacote (item 127): embalagem e referência por kg/L/un sob o preço do anúncio */
+.oferta.pacote .meio .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.oferta .preco-et .pc-emb { font: 700 0.85rem/1.25 var(--fonte-texto); color: var(--fg); }
+.oferta .preco-et .pc-ref { font: 400 0.8rem/1.25 var(--fonte-texto); color: var(--muted); }
+.oferta .preco-et.bom .pc-emb { color: var(--on-good); }
+.oferta .preco-et.bom .pc-ref { color: var(--on-good); }
 
 /* Tela Produto */
 .voltar {
@@ -343,7 +350,12 @@ img, svg, video { max-width: 100%; }
 .heroi .cima { color: var(--muted); font-size: 0.9rem; margin: 0 0 4px; }
 .heroi .linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .heroi .meio { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.heroi .merc { display: block; font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.15rem; }
+.heroi .merc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.15rem; }
+.heroi .preco-et .pc-emb { font: 700 0.85rem/1.25 var(--fonte-texto); color: var(--fg); }
+.heroi .preco-et .pc-ref { font: 400 0.8rem/1.25 var(--fonte-texto); color: var(--muted); }
+.heroi .preco-et.bom .pc-emb { color: var(--on-good); }
+.heroi .preco-et.bom .pc-ref { color: var(--on-good); }
+.heroi .merc .marca-prod { white-space: nowrap; }
 .heroi .fim { margin: 8px 0 0; font-weight: 700; }
 .heroi .muted + .muted, .heroi .fim + .muted { margin-top: 4px; }
 .titulo-sec { font: 800 1rem var(--fonte-titulo); margin: 16px 0 8px; }
@@ -351,8 +363,11 @@ img, svg, video { max-width: 100%; }
 .linha-merc { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 0; border-bottom: 1px solid var(--line); }
 .linha-merc:last-child { border-bottom: 0; }
 .linha-merc .meio { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.linha-merc b .marca-prod { white-space: nowrap; }
 .linha-merc .sub { color: var(--muted); font-size: 0.9rem; }
-.linha-merc .p { font: 800 1.1rem var(--fonte-titulo); text-align: right; font-variant-numeric: tabular-nums; }
+.linha-merc .p { flex: none; white-space: nowrap; font: 800 1.1rem var(--fonte-titulo); text-align: right; font-variant-numeric: tabular-nums; }
+.linha-merc .p .pc-emb { display: block; font: 700 0.85rem/1.25 var(--fonte-texto); color: var(--fg); }
+.linha-merc .p .pc-ref { display: block; font: 400 0.8rem/1.25 var(--fonte-texto); color: var(--muted); }
 .linha-merc .mais { display: block; font: 400 0.8rem var(--fonte-texto); color: var(--muted); }
 details.rec { margin: 8px 0; }
 details.rec > summary { display: flex; align-items: center; min-height: 44px; color: var(--brand); font-weight: 700; cursor: pointer; }

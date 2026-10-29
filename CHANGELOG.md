@@ -1,5 +1,9 @@
 # Novidades do Radar
 
+## 0.13.0
+- Produtos vendidos em pacote (como arroz, macarrão e refrigerante de 2 L): o cartão mostra o preço do pacote, igual ao anúncio, e embaixo o preço por kg, L ou un, como referência
+- Tela Produto: o mesmo jeito de mostrar o preço, no destaque e nos mercados
+
 ## 0.12.1
 - Textos mais curtos e claros na Lista e na lista por foto: "Sem preço agora" no lugar de "Sem oferta agora"
 - Tela Produto: o topo não mostra mais a frase "Alvo ainda em cálculo"

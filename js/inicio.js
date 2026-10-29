@@ -1,6 +1,6 @@
 // Tela Início: lógica pura (sem DOM) + montagem dos cartões. Nenhuma função lança exceção.
 
-import { cartaoOferta } from "./oferta.js";
+import { cartaoOferta, precoDaOferta, ofertaDoAlerta } from "./oferta.js";
 import { situacaoDe, textoEstado } from "./hoje.js";
 import { lerLista, resumoDaLista, centavosParaTexto } from "./lista.js";
 
@@ -122,17 +122,21 @@ export function renderInicio(raiz, ctx, deps) {
   const antigos = alertas.filter((a) => !a.novo);
   raiz.append(el("h2", { className: "titulo-ofertas" }, "Ofertas boas hoje", el("span", { className: "contagem-ofertas", textContent: String(alertas.length) })));
   const medidas = new Map((Array.isArray(ctx.dados.produtos) ? ctx.dados.produtos : []).map((p) => [p && p.id, p && p.medida]));
-  novos.forEach((a) => raiz.append(cartao(a, medidas, deps, el)));
+  novos.forEach((a) => raiz.append(cartao(a, medidas, ctx.dados, deps, el)));
   if (novos.length && antigos.length) raiz.append(el("h3", { className: "subtitulo", textContent: "Já vistos" }));
-  antigos.forEach((a) => raiz.append(cartao(a, medidas, deps, el)));
+  antigos.forEach((a) => raiz.append(cartao(a, medidas, ctx.dados, deps, el)));
   raiz.append(el("div", { className: "acoes" }, el("a", { className: "botao sec", href: "#produtos", textContent: "Ver todos os produtos" })));
 }
 
-function cartao(a, medidas, deps, el) {
+function cartao(a, medidas, dados, deps, el) {
   const alvo = typeof a.alvo === "number" ? { valor: a.alvo } : null;
   const { situacao, diferenca } = situacaoDe({ preco_medida: a.preco_medida }, alvo);
+  // pacote só quando a oferta do alerta é achada; senão o cartão fica por medida, como sempre foi
+  const oferta = ofertaDoAlerta(dados, a);
+  const pc = oferta ? precoDaOferta(oferta, medidas.get(a.produto_id)) : null;
   return cartaoOferta(el, {
-    id: a.produto_id, nome: a.produto_nome, mercado: a.mercado, lojas: a.lojas, preco: a.preco_medida,
+    pacote: pc && pc.modo === "pacote" ? { preco: pc.principal, embalagem: pc.embalagem } : undefined,
+    id: a.produto_id, nome: a.produto_nome, marca: oferta ? oferta.marca : undefined, mercado: a.mercado, lojas: a.lojas, preco: a.preco_medida,
     medida: medidas.get(a.produto_id), situacao, texto: textoEstado(diferenca, situacao), novo: a.novo, link: deps.linkProduto,
   });
 }

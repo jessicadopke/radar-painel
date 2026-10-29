@@ -1,6 +1,7 @@
 // Tela Produto: lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
 import { formatarPreco, formatarLojas, formatarValidade } from "./inicio.js";
 import { situacaoDe, textoEstado } from "./hoje.js";
+import { precoDaOferta, rotuloComMarca } from "./oferta.js";
 import { renderGrafico, tituloGrafico } from "./grafico.js";
 
 const ehNumero = (n) => typeof n === "number" && Number.isFinite(n);
@@ -36,7 +37,11 @@ export function textoCondicao(oferta, medida) {
   const o = oferta && typeof oferta === "object" ? oferta : {};
   if (!ehNumero(o.preco_condicional)) return "";
   const valor = ehNumero(o.preco_cond_medida) ? o.preco_cond_medida : o.preco_condicional;
-  const base = `${formatarPreco(valor)}${sufixoMedida(medida)} com condição`;
+  // em modo pacote o preço com condição é o do pacote, e o por medida vai entre parênteses
+  const pacote = precoDaOferta(o, medida).modo === "pacote";
+  const base = pacote
+    ? `${formatarPreco(o.preco_condicional)} o pacote${ehNumero(o.preco_cond_medida) ? ` (${formatarPreco(o.preco_cond_medida)}${sufixoMedida(medida)})` : ""} com condição`
+    : `${formatarPreco(valor)}${sufixoMedida(medida)} com condição`;
   return o.condicao ? `${base} · ${String(o.condicao)}` : base;
 }
 
@@ -97,7 +102,7 @@ export function renderProduto(raiz, ctx, deps) {
   if (linhas.length > 1) {
     raiz.append(el("h2", { className: "titulo-sec", textContent: "Outros mercados" }));
     const lista = el("div", { className: "cartao tight" });
-    linhas.slice(1).forEach((l) => lista.append(linhaMercado(l, linhas[0].oferta, medida, el)));
+    linhas.slice(1).forEach((l) => lista.append(linhaMercado(l, linhas[0].oferta, medida, nome, el)));
     raiz.append(lista);
   }
   raiz.append(detalhes(linhas[0].oferta, nome, medida, el, doc));
@@ -121,29 +126,46 @@ function heroi(l, produto, nome, medida, el) {
   const validade = formatarValidade(o.validade_fim, hojeLocal());
   const loja = formatarLojas(o.lojas);
   const sub = loja ? `${loja} · ${validade.charAt(0).toLowerCase()}${validade.slice(1)}` : validade;
-  const et = el("span", { className: "preco-et" + (l.situacao === "abaixo" ? " bom" : "") }, formatarPreco(o.preco_medida));
-  if (medida && ehNumero(o.preco_medida)) et.append(el("small", { textContent: `por ${medida}` }));
-  const meio = el("span", { className: "meio" }, el("span", { className: "merc", textContent: String(o.mercado ?? "") }));
+  const pc = precoDaOferta(o, medida);
+  const et = el("span", { className: "preco-et" + (l.situacao === "abaixo" ? " bom" : "") }, formatarPreco(pc.principal));
+  if (pc.modo === "pacote") et.append(...marcasDoPacote(pc, el));
+  else if (medida && ehNumero(o.preco_medida)) et.append(el("small", { textContent: `por ${medida}` }));
+  const meio = el("span", { className: "meio" }, el("span", { className: "merc" }, ...rotuloComMarca(el, o.marca, nome, o.mercado)));
   meio.append(el("span", { className: "muted", textContent: sub }));
   const caixa = el("section", { className: "heroi" }, el("p", { className: "cima", textContent: "Mais barato hoje" }), el("div", { className: "linha" }, meio, et));
   let fim = textoEstado(l.diferenca, l.situacao);
-  if (fim && ehNumero(produto.alvo && produto.alvo.valor)) fim += ` (${formatarPreco(produto.alvo.valor)})`;
+  // o alvo é por medida: em modo pacote a frase diz a medida ("R$ 6,00 / kg")
+  if (fim && ehNumero(produto.alvo && produto.alvo.valor)) fim += ` (${formatarPreco(produto.alvo.valor)}${pc.modo === "pacote" ? sufixoMedida(medida) : ""})`;
   if (fim) caixa.append(el("p", { className: "fim", textContent: fim }));
   const cond = textoCondicao(o, medida);
   if (cond) caixa.append(el("p", { className: "muted", textContent: cond }));
   return caixa;
 }
 
-function linhaMercado(l, maisBarato, medida, el) {
+// Embalagem (lida como "embalagem de 5 kg") e preço por medida, sob o preço do pacote.
+function marcasDoPacote(pc, el) {
+  return [
+    el("small", { className: "pc-emb" }, el("span", { className: "so-leitor", textContent: "embalagem de " }), pc.embalagem),
+    el("small", { className: "pc-ref", textContent: `${formatarPreco(pc.referencia)} por ${pc.medida}` }),
+  ];
+}
+
+function linhaMercado(l, maisBarato, medida, nome, el) {
   const o = l.oferta;
-  const meio = el("span", { className: "meio" }, el("b", { textContent: String(o.mercado ?? "") }));
+  const meio = el("span", { className: "meio" }, el("b", {}, ...rotuloComMarca(el, o.marca, nome, o.mercado)));
   const loja = [formatarLojas(o.lojas), textoVisto(o.coletada_em)].filter(Boolean).join(" · ");
   if (loja) meio.append(el("div", { className: "sub", textContent: loja }));
   const cond = textoCondicao(o, medida);
   if (cond) meio.append(el("div", { className: "sub", textContent: cond }));
-  const p = el("span", { className: "p" }, formatarPreco(o.preco_medida));
+  const pc = precoDaOferta(o, medida);
+  const p = el("span", { className: "p" }, formatarPreco(pc.principal));
+  if (pc.modo === "pacote") p.append(...marcasDoPacote(pc, el));
   const mais = textoMais(o, maisBarato);
-  if (mais) p.append(el("small", { className: "mais", textContent: mais }));
+  if (mais) {
+    const m = el("small", { className: "mais", textContent: mais });
+    m.setAttribute("aria-label", `${mais.slice(1)} mais caro${medida ? ` por ${medida}` : ""}`);
+    p.append(m);
+  }
   return el("div", { className: "linha-merc" }, meio, p);
 }
 
