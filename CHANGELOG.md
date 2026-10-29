@@ -1,5 +1,8 @@
 # Novidades do Radar
 
+## 0.14.0
+- A marca do produto aparece junto do mercado nos cartões de oferta e na tela Produto, como "Coca-Cola · Atacadão". No arroz também: cada oferta mostra a sua marca
+
 ## 0.13.0
 - Produtos vendidos em pacote (como arroz, macarrão e refrigerante de 2 L): o cartão mostra o preço do pacote, igual ao anúncio, e embaixo o preço por kg, L ou un, como referência
 - Tela Produto: o mesmo jeito de mostrar o preço, no destaque e nos mercados

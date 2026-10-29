@@ -8,7 +8,7 @@ import { renderProduto } from "./produto.js";
 import { rota } from "./rotas.js";
 import { renderInicio, lerVisitaAnterior, gravarVisita } from "./inicio.js";
 
-const VERSION = "0.13.0";
+const VERSION = "0.14.0";
 const PREFIXO_CACHE = "radar-";
 
 const $tela = document.getElementById("tela");
