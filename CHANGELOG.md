@@ -1,5 +1,16 @@
 # Novidades do Radar
 
+## 1.1.0
+- A primeira aba agora se chama Ofertas e mostra todas as ofertas vigentes, em grupos por mercado ou por categoria
+- Cada grupo abre e fecha com um toque no nome. "Expandir tudo" e "Recolher tudo" ficam logo acima da lista
+- "Vencem hoje" aparece em primeiro, com as ofertas que acabam hoje. Essa oferta também fica no grupo do seu mercado ou da sua categoria
+- "Só as boas" mostra só as ofertas abaixo do preço-alvo ou com alerta
+- Busca na aba Ofertas e na aba Produtos: os grupos sem resultado somem, e os que têm resultado abrem
+- Os cartões de oferta mostram "Vale até" com a data, "Vence hoje" nas ofertas que acabam hoje e o selo "Preço bom" nas boas
+- Produtos agrupados por categoria, que abrem e fecham, no lugar dos botões de categoria
+- O app lembra quais grupos você abriu ou fechou, neste aparelho
+- Mudou: o atalho instalado "Início" passou a se chamar "Ofertas". Ele continua abrindo a mesma tela
+
 ## 1.0.0
 - Primeira versão estável do Radar de Preços Palmas. A partir daqui, o número de versão é o do projeto inteiro: coleta, histórico e este app
 - Mudou: o Instagram passa a ser coletado duas vezes por dia (12h e 21h), e o perfil do Atacadão é o oficial

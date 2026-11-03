@@ -397,3 +397,27 @@ h2.titulo-ofertas .contagem-ofertas { color: var(--muted); font-weight: 700; }
 .tela-mais .bloco-mais p { margin: 0 0 8px; overflow-wrap: anywhere; }
 .tela-mais .bloco-mais ul { margin: 0 0 8px; padding-left: 20px; }
 .tela-mais .linha-mais .botao:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+/* Grupos que abrem e fecham, aviso "Vence hoje" e linha de selos (item 174). Só tokens; nenhuma regra acima muda. */
+.vence .ico, .grupo-btn .ico { display: inline-flex; flex: none; }
+.vence .ico svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.grupo-btn .ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.linha-selos { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
+.oferta .linha-selos .sub { margin: 0; }
+.linha-selos .vence { display: inline-flex; align-items: center; gap: 4px; color: var(--brand); font: 700 0.85rem var(--fonte-texto); }
+.barra-grupos { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; }
+.linha-resumo { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.linha-resumo b { color: var(--fg); }
+.grupo { margin: 8px 0 0; border-top: 1px solid var(--line); }
+h2.grupo-h { margin: 0; font-size: 1rem; }
+.grupo-btn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 0; background: none; border: 0; border-radius: 8px; color: var(--fg); font: 800 1rem var(--fonte-titulo); text-align: left; cursor: pointer; }
+.grupo-btn .nome-grupo { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.grupo-btn .contagem-ofertas { margin-left: 4px; color: var(--muted); font: 400 0.9rem var(--fonte-texto); }
+.grupo-btn .ico { color: var(--brand); }
+.grupo-btn .seta { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; margin-right: -14px; color: var(--muted); }
+.grupo-btn .seta svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transform: rotate(-90deg); transition: transform .15s; }
+.grupo-btn[aria-expanded="true"] .seta svg { transform: rotate(0deg); }
+.grupo-btn:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.grupo-painel { padding-top: 4px; }
+.grupo-painel[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .grupo-btn .seta svg { transition: none; } }

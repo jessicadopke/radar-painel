@@ -6,9 +6,10 @@ import { atualizarChip } from "./frescor.js";
 import { renderMais } from "./mais.js";
 import { renderProduto } from "./produto.js";
 import { rota } from "./rotas.js";
-import { renderInicio, lerVisitaAnterior, gravarVisita } from "./inicio.js";
+import { lerVisitaAnterior, gravarVisita } from "./inicio.js";
+import { renderOfertas } from "./ofertas.js";
 
-const VERSION = "1.0.0";
+const VERSION = "1.1.0";
 const PREFIXO_CACHE = "radar-";
 
 const $tela = document.getElementById("tela");
@@ -112,14 +113,16 @@ function hojeIso() {
   return `${d.getFullYear()}-${dois(d.getMonth() + 1)}-${dois(d.getDate())}`;
 }
 
+// busca e agrupamento da aba Ofertas: só em memória (o agrupamento escolhido também fica em radar.grupos)
+const filtrosOfertas = { busca: "" };
 function telaInicio(raiz, ctx) {
-  renderInicio(raiz, ctx, { document, visitaAnterior, hojeIso: hojeIso(), linkProduto: Boolean(telas.produto), storage });
+  renderOfertas(raiz, ctx, { document, visitaAnterior, hojeIso: hojeIso(), linkProduto: Boolean(telas.produto), storage, filtros: filtrosOfertas });
 }
 
 // filtros da tela Produtos: só em memória (sobrevivem à troca de aba, somem ao reabrir o app)
 const filtrosProdutos = { busca: "", categoria: "", mercado: "" };
 function telaProdutos(raiz, ctx) {
-  renderHoje(raiz, ctx, { document, filtros: filtrosProdutos, linkProduto: Boolean(telas.produto) });
+  renderHoje(raiz, ctx, { document, filtros: filtrosProdutos, linkProduto: Boolean(telas.produto), hojeIso: hojeIso(), storage });
 }
 
 // Rede e câmera da lista por foto entram aqui; lista.js e lista_foto.js nunca chamam o fetch direto.

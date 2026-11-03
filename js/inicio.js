@@ -75,7 +75,19 @@ export function textoFaixaLista(itens, mercados) {
   return partes.join(" · ");
 }
 
+// Cartão "Minha lista" (a.faixa-lista); null sem lista, sem dados ou sem armazenamento.
+export function faixaDaLista(el, ctx, storage) {
+  if (!storage || !ctx.dados) return null;
+  const r = resumoDaLista(ctx.dados, lerLista(storage));
+  if (!r.itens) return null;
+  const a = el("a", { className: "faixa-lista", href: "#lista" },
+    el("span", { className: "faixa-texto" }, "Minha lista", el("small", { textContent: textoFaixaLista(r.itens, r.mercados) })));
+  if (r.totalCent !== null) a.append(el("b", { textContent: centavosParaTexto(r.totalCent) }));
+  return a;
+}
+
 // ---- DOM ----
+// A tela do app agora é ofertas.js; renderInicio fica como a versão só de alertas.
 // deps: { document, visitaAnterior, hojeIso, linkProduto (bool), storage (opcional) }
 export function renderInicio(raiz, ctx, deps) {
   const doc = deps.document;
@@ -85,16 +97,7 @@ export function renderInicio(raiz, ctx, deps) {
     e.append(...filhos);
     return e;
   };
-  const faixaLista = () => {
-    if (!deps.storage || !ctx.dados) return null;
-    const lista = lerLista(deps.storage);
-    const r = resumoDaLista(ctx.dados, lista);
-    if (!r.itens) return null;
-    const a = el("a", { className: "faixa-lista", href: "#lista" },
-      el("span", { className: "faixa-texto" }, "Minha lista", el("small", { textContent: textoFaixaLista(r.itens, r.mercados) })));
-    if (r.totalCent !== null) a.append(el("b", { textContent: centavosParaTexto(r.totalCent) }));
-    return a;
-  };
+  const faixaLista = () => faixaDaLista(el, ctx, deps.storage);
   const vazio = (texto, botao) => {
     const c = el("div", { className: "cartao" }, el("p", { textContent: texto }));
     if (botao) {

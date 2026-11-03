@@ -1,9 +1,13 @@
 // Cartão de oferta único (Início e Produtos). Nenhuma função lança exceção.
 import { formatarPreco, formatarLojas } from "./inicio.js";
 
+export const RELOGIO = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+
 // d: { id, nome, marca (opcional), mercado, lojas, preco, medida, situacao, texto, novo, link (bool), pacote (opcional) }
 // preco/medida são sempre o preço por medida (kg, L, un). pacote: { preco, embalagem } troca o destaque pelo
 // preço do pacote (igual ao anúncio) e deixa o preço por medida como referência, abaixo.
+// Opcionais (sem eles o cartão sai como sempre): venceHoje (aviso "Vence hoje", no lugar de validade), validade (texto
+// "Vale até 30/10"), selo (selo "Preço bom"), condicao (texto da linha de condição do preço condicional).
 // situacao: "abaixo" põe o preço na etiqueta; "sem-oferta" vira cartão tracejado.
 export function cartaoOferta(el, d) {
   const semOferta = d.situacao === "sem-oferta";
@@ -16,6 +20,12 @@ export function cartaoOferta(el, d) {
     const resto = [d.mercado, lojas].filter(Boolean).join(" · ");
     meio.append(el("div", { className: "sub" }, ...rotuloComMarca(el, d.marca, d.nome, resto)));
     if (d.texto) meio.append(el("div", { className: "estado", textContent: d.texto }));
+    if (d.condicao) meio.append(el("div", { className: "sub", textContent: String(d.condicao) }));
+    const selos = [];
+    if (d.venceHoje) selos.push(el("span", { className: "vence" }, el("span", { className: "ico", ariaHidden: "true", innerHTML: RELOGIO }), "Vence hoje"));
+    else if (d.validade) selos.push(el("span", { className: "sub", textContent: String(d.validade) }));
+    if (d.selo) selos.push(el("span", { className: "selo-alvo", textContent: "Preço bom" }));
+    if (selos.length) meio.append(el("div", { className: "linha-selos" }, ...selos));
   }
   const pacote = !semOferta && d.pacote && d.medida ? d.pacote : null;
   const classeEt = "preco-et" + (d.situacao === "abaixo" ? " bom" : "");

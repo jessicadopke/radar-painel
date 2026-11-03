@@ -1,5 +1,5 @@
 // Service worker do Radar: o app abre sem internet depois da primeira vez.
-const VERSION = "radar-1.0.0";
+const VERSION = "radar-1.1.0";
 // dados.json e miniaturas/ NÃO entram aqui: vêm do site publicado, não de app/.
 const FILES = [
   "index.html",
@@ -13,6 +13,7 @@ const FILES = [
   "js/dados.js",
   "js/foto.js",
   "js/frescor.js",
+  "js/grupos.js",
   "js/grafico.js",
   "js/hoje.js",
   "js/inicio.js",
@@ -20,6 +21,7 @@ const FILES = [
   "js/lista_foto.js",
   "js/mais.js",
   "js/oferta.js",
+  "js/ofertas.js",
   "js/produto.js",
   "js/rotas.js",
   "js/sobre.js",

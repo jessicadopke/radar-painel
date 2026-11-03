@@ -1,6 +1,8 @@
 // Tela Produtos (arquivo ainda chamado hoje.js): lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
 import { formatarPreco } from "./inicio.js";
 import { cartaoOferta, precoDaOferta } from "./oferta.js";
+import { textoCondicao } from "./produto.js";
+import { agruparProdutos, desenharGrupos } from "./grupos.js";
 
 export function normalizar(texto) {
   if (texto == null) return "";
@@ -76,7 +78,7 @@ export function textoEstado(diferenca, situacao) {
 }
 
 // ---- DOM ----
-// deps: { document, filtros ({busca, categoria, mercado}, alterado no lugar), linkProduto (bool) }
+// deps: { document, filtros ({busca, mercado}, alterado no lugar), linkProduto (bool), hojeIso, storage }
 export function renderHoje(raiz, ctx, deps) {
   const doc = deps.document;
   const el = (tag, props = {}, ...filhos) => {
@@ -106,34 +108,33 @@ export function renderHoje(raiz, ctx, deps) {
   $busca.setAttribute("enterkeyhint", "search");
   const $lista = el("div", { className: "lista-hoje" });
 
-  // uma fileira só: Todos, categorias e mercados (estes com borda tracejada); tocar no marcado desmarca
+  // uma fileira só: Todos e mercados (tracejados); a categoria virou o grupo. Tocar no marcado desmarca
   const caixa = el("div", { className: "filtros uma", role: "group" });
   caixa.setAttribute("aria-label", "Filtros");
   const chips = [
     { chave: "", valor: "", texto: "Todos" },
-    ...categoriasDe(ctx.dados).map((v) => ({ chave: "categoria", valor: v, texto: v })),
     ...mercadosDe(ctx.dados).map((v) => ({ chave: "mercado", valor: v, texto: v })),
   ].map((c) => {
     const b = el("button", { type: "button", className: c.chave === "mercado" ? "filtro mercado" : "filtro", textContent: c.texto });
     b.addEventListener("click", () => {
-      if (!c.chave) { filtros.categoria = ""; filtros.mercado = ""; }
-      else filtros[c.chave] = filtros[c.chave] === c.valor ? "" : c.valor;
+      if (!c.chave) filtros.mercado = "";
+      else filtros.mercado = filtros.mercado === c.valor ? "" : c.valor;
       marcar();
       desenhar();
     });
     return { c, b };
   });
   function marcar() {
-    const nenhum = !filtros.categoria && !filtros.mercado;
-    chips.forEach(({ c, b }) => b.setAttribute("aria-pressed", String(c.chave ? filtros[c.chave] === c.valor : nenhum)));
+    chips.forEach(({ c, b }) => b.setAttribute("aria-pressed", String(c.chave ? filtros.mercado === c.valor : !filtros.mercado)));
   }
   marcar();
   caixa.append(...chips.map((x) => x.b));
 
   function desenhar() {
-    const itens = listaHoje(ctx.dados, filtros);
     $lista.replaceChildren();
-    if (!itens.length) {
+    const busca = (filtros.busca || "").trim();
+    const r = agruparProdutos(ctx.dados, { busca, mercado: filtros.mercado || "", hoje: deps.hojeIso });
+    if (!r.total) {
       const limpar = el("button", { type: "button", className: "botao", textContent: "Limpar filtros" });
       limpar.addEventListener("click", () => {
         filtros.busca = ""; filtros.categoria = ""; filtros.mercado = "";
@@ -144,7 +145,11 @@ export function renderHoje(raiz, ctx, deps) {
       $lista.append(el("div", { className: "cartao" }, el("p", { textContent: "Nenhum produto encontrado." }), el("div", { className: "acoes" }, limpar)));
       return;
     }
-    itens.forEach((i) => $lista.append(cartao(i, deps, el)));
+    desenharGrupos($lista, r.grupos, {
+      document: doc, tela: "produtos", modo: "cat", storage: deps.storage, busca: Boolean(busca),
+      resumo: [el("b", { textContent: String(r.total) }), r.total === 1 ? " produto" : " produtos"],
+      cartao: (i, e) => cartao(i, deps, e),
+    });
   }
 
   $busca.addEventListener("input", () => { filtros.busca = $busca.value; desenhar(); });
@@ -155,9 +160,16 @@ export function renderHoje(raiz, ctx, deps) {
 function cartao(i, deps, el) {
   const o = i.oferta;
   const pc = o ? precoDaOferta(o, i.medida) : null;
+  // só preço condicional: mostra o condicional e a condição (nunca fica sem ela)
+  const soCondicional = o && !ehNumero(o.preco_medida);
+  const porMedida = soCondicional && ehNumero(o.preco_cond_medida);
+  const cond = o ? textoCondicao(o, i.medida) : "";
   return cartaoOferta(el, {
-    pacote: pc && pc.modo === "pacote" ? { preco: pc.principal, embalagem: pc.embalagem } : undefined,
-    id: i.id, nome: i.nome, marca: o ? o.marca : undefined, mercado: o && o.mercado, lojas: o && o.lojas, preco: o && o.preco_medida,
-    medida: i.medida, situacao: i.situacao, texto: textoEstado(i.diferenca, i.situacao), link: deps.linkProduto,
+    pacote: !soCondicional && pc && pc.modo === "pacote" ? { preco: pc.principal, embalagem: pc.embalagem } : undefined,
+    id: i.id, nome: i.nome, marca: o ? o.marca : undefined, mercado: o && o.mercado, lojas: o && o.lojas,
+    preco: soCondicional ? (porMedida ? o.preco_cond_medida : o.preco_condicional) : o && o.preco_medida,
+    medida: soCondicional && !porMedida ? undefined : i.medida,
+    situacao: i.situacao, texto: textoEstado(i.diferenca, i.situacao), link: deps.linkProduto,
+    venceHoje: Boolean(i.venceHoje), selo: Boolean(i.boa), condicao: cond || undefined,
   });
 }
