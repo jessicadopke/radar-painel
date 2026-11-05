@@ -1,6 +1,8 @@
 // Tela Ofertas (aba antes chamada Início; rota e id continuam "inicio"): todas as ofertas vigentes em grupos
 // que abrem e fecham. Nenhuma função lança exceção.
-import { cartaoOferta, precoDaOferta, ofertaDoAlerta } from "./oferta.js";
+import { cartaoOferta, precoDaOferta, ofertaDoAlerta, marcarNaLista, comClasse, mudarOcultar } from "./oferta.js";
+import { ativarArrastar } from "./gesto_arrastar.js";
+import { lerLista, gravarLista, adicionar, remover, estaNaLista } from "./lista.js";
 import { situacaoDe, textoEstado } from "./hoje.js";
 import { textoCondicao } from "./produto.js";
 import { alertasParaInicio, faixaDaLista, formatarValidade } from "./inicio.js";
@@ -38,7 +40,11 @@ export function dadosDoCartao(item, { hoje, novas, linkProduto } = {}) {
     pacote: pc.modo === "pacote" ? { preco: pc.principal, embalagem: pc.embalagem } : undefined, condicao: cond || undefined };
 }
 
-// deps: { document, visitaAnterior, hojeIso, linkProduto, storage, filtros ({busca, modo}, só em memória) }
+const DURACAO_AVISO = 5000; // ms
+const px = (n) => `${Math.round(n)}px`;
+
+// deps: { document, visitaAnterior, hojeIso, linkProduto, storage, filtros ({busca, modo}, só em memória), ocultos (controle, #187),
+//         setTimeout/clearTimeout (opcionais, para o teste do aviso) }
 export function renderOfertas(raiz, ctx, deps) {
   const doc = deps.document;
   const el = (tag, props = {}, ...filhos) => {
@@ -96,10 +102,87 @@ export function renderOfertas(raiz, ctx, deps) {
   const $lista = el("div", { className: "lista-ofertas" });
   $busca.addEventListener("input", () => { filtros.busca = $busca.value; desenhar(); });
 
-  const cartao = (item, e) => cartaoOferta(e, dadosDoCartao(item, { hoje: deps.hojeIso, novas, linkProduto: deps.linkProduto }));
+  // ---- adicionar à lista (#188): gesto de arrastar e botão; a lista guarda o produto, não a oferta ----
+  const agendar = deps.setTimeout ?? globalThis.setTimeout;
+  const cancelar = deps.clearTimeout ?? globalThis.clearTimeout;
+  const linhas = new Map(); // id do produto -> linhas de cartão na tela (o mesmo produto pode aparecer em vários grupos)
+  const $aviso = el("div", { className: "aviso-area" });
+  $aviso.setAttribute("role", "status");
+  $aviso.setAttribute("aria-live", "polite");
+  let relogio = null;
+  function fecharAviso() {
+    if (relogio !== null) { try { cancelar(relogio); } catch {} relogio = null; }
+    $aviso.replaceChildren();
+  }
+  function avisar(texto, desfazer) {
+    fecharAviso();
+    if (deps.ocultos) deps.ocultos.fecharAviso(); // só um aviso por vez na tela
+    const caixa = el("div", { className: "aviso-lista" }, el("span", { textContent: texto }));
+    if (desfazer) {
+      const b = el("button", { type: "button", textContent: "Desfazer" });
+      b.addEventListener("click", () => { fecharAviso(); desfazer(); });
+      caixa.append(b);
+    }
+    $aviso.append(caixa);
+    try { relogio = agendar(fecharAviso, DURACAO_AVISO); } catch { relogio = null; }
+  }
+  function atualizarProduto(id, nome) {
+    const naLista = estaNaLista(lerLista(deps.storage), id);
+    for (const l of linhas.get(id) ?? []) { marcarNaLista(l, naLista, nome); textoDaFaixa(l, false); }
+  }
+  function textoDaFaixa(linha, passou) {
+    const p = linha.partes;
+    p.textoFaixa.textContent = String(linha.className).split(" ").includes("ja") ? "Já está na lista" : passou ? "Solte para adicionar" : "Adicionar à lista";
+  }
+  function adicionarProduto(id, nome) {
+    const antes = lerLista(deps.storage);
+    if (estaNaLista(antes, id)) { atualizarProduto(id, nome); avisar(`${nome} já está na lista`); return; }
+    if (!gravarLista(deps.storage, adicionar(antes, id))) { avisar("Não foi possível guardar na lista. Tente de novo."); return; }
+    atualizarProduto(id, nome);
+    avisar(`${nome} entrou na lista`, () => {
+      // desfaz só este produto; o resto da lista (e os itens fora do catálogo) fica como está
+      gravarLista(deps.storage, remover(lerLista(deps.storage), id));
+      atualizarProduto(id, nome);
+    });
+  }
+  function ligarGesto(linha, id, nome) {
+    const mudar = (m) => {
+      const { deslocamento, passou, arrastando } = m;
+      if (mudarOcultar(linha, m)) { // para a direita (#187): só --dxo; o lado da lista fica parado
+        comClasse(linha, "arrastando", true);
+        comClasse(linha, "passou", false);
+        textoDaFaixa(linha, false);
+        if (linha.style && typeof linha.style.setProperty === "function") linha.style.setProperty("--dx", px(0));
+        return;
+      }
+      comClasse(linha, "arrastando", arrastando);
+      comClasse(linha, "passou", arrastando && passou);
+      textoDaFaixa(linha, passou);
+      if (linha.style && typeof linha.style.setProperty === "function") linha.style.setProperty("--dx", px(deslocamento));
+    };
+    ativarArrastar(linha.partes.frente, {
+      esquerda: { rotulo: "Adicionar à lista", acao: () => adicionarProduto(id, nome) },
+      direita: deps.ocultos ? { rotulo: "Ocultar produto", acao: () => deps.ocultos.ocultarDoCartao(id, nome) } : null,
+      aoMudar: mudar, deps: { setTimeout: agendar },
+    });
+  }
+
+  const cartao = (item, e) => {
+    const d = dadosDoCartao(item, { hoje: deps.hojeIso, novas, linkProduto: deps.linkProduto });
+    if (!deps.storage) return cartaoOferta(e, d);
+    const id = String(d.id);
+    const c = cartaoOferta(e, { ...d, naLista: estaNaLista(lerLista(deps.storage), id), aoAdicionar: () => adicionarProduto(id, d.nome) });
+    if (c.partes) {
+      linhas.set(id, [...(linhas.get(id) ?? []), c]);
+      textoDaFaixa(c, false);
+      ligarGesto(c, id, d.nome);
+    }
+    return c;
+  };
 
   function desenhar() {
     $lista.replaceChildren();
+    linhas.clear();
     const busca = (filtros.busca || "").trim();
     const r = agruparOfertas(dados, opcoes({ modo, busca }));
     if (!r.total) {
@@ -135,5 +218,5 @@ export function renderOfertas(raiz, ctx, deps) {
   }
   desenhar();
   raiz.append(titulo(), $busca, caixa, $lista,
-    el("div", { className: "acoes" }, el("a", { className: "botao sec", href: "#produtos", textContent: "Ver todos os produtos" })));
+    el("div", { className: "acoes" }, el("a", { className: "botao sec", href: "#produtos", textContent: "Ver todos os produtos" })), $aviso);
 }

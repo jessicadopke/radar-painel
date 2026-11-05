@@ -8,8 +8,10 @@ import { renderProduto } from "./produto.js";
 import { rota } from "./rotas.js";
 import { lerVisitaAnterior, gravarVisita } from "./inicio.js";
 import { renderOfertas } from "./ofertas.js";
+import { lerOcultos, filtrarDados } from "./ocultos.js";
+import { criarControle } from "./controle_ocultos.js";
 
-const VERSION = "1.1.0";
+const VERSION = "1.2.0";
 const PREFIXO_CACHE = "radar-";
 
 const $tela = document.getElementById("tela");
@@ -24,6 +26,20 @@ let registro = null;
 const storage = (() => { try { return window.localStorage; } catch { return null; } })();
 const visitaAnterior = storage ? lerVisitaAnterior(storage) : null;
 
+// Produtos ocultos (#187): o aviso "Desfazer" fica numa área fixa própria, porque aparece em Ofertas, Produtos e Produto.
+const $avisoGlobal = document.createElement("div");
+$avisoGlobal.className = "aviso-area";
+$avisoGlobal.setAttribute("role", "status");
+$avisoGlobal.setAttribute("aria-live", "polite");
+document.body.append($avisoGlobal);
+let navegouNoApp = false; // já houve troca de tela dentro do app? então history.back() volta para uma tela do app
+const ocultos = criarControle({
+  document, storage, area: $avisoGlobal, hojeIso: () => hojeIso(),
+  redesenhar: (opcoes) => mostrar(opcoes),
+  irPara: (hash) => { location.hash = hash; },
+  voltarOrigem: () => { if (navegouNoApp) history.back(); else location.hash = "#produtos"; },
+});
+
 // Pontos de entrada das telas: #13 a #16 só substituem estas funções (raiz, contexto).
 export const telas = {
   inicio: telaInicio,
@@ -34,11 +50,18 @@ export const telas = {
 };
 
 // ---- roteador (hash): a função rota() fica em rotas.js ----
-function mostrar() {
+// `manterRolagem`: redesenho depois de ocultar/mostrar, na mesma tela, sem pular para o topo.
+function mostrar(opcoes) {
+  const manter = Boolean(opcoes && opcoes.manterRolagem === true);
   const r = rota(location.hash);
+  const y = window.scrollY;
+  ocultos.aoMudarRota(r);
   $tela.replaceChildren();
-  if (r.tela === "produto") window.scrollTo(0, 0);
-  telas[r.tela]($tela, { dados, estadoDados, rota: r });
+  if (r.tela === "produto" && !manter) window.scrollTo(0, 0);
+  // filtro único dos produtos ocultos: todas as telas recebem ctx.dados já filtrado; a tela Produto e a de ocultos usam dadosCompletos
+  const estadoOcultos = lerOcultos(storage);
+  telas[r.tela]($tela, { dados: filtrarDados(dados, estadoOcultos), dadosCompletos: dados, estadoDados, rota: r, ocultos: estadoOcultos });
+  if (manter) window.scrollTo(0, y);
   document.querySelectorAll(".abas button").forEach((b) => {
     if (b.dataset.tela === r.aba) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
@@ -51,7 +74,7 @@ document.querySelectorAll(".abas button").forEach((b) => {
     else location.hash = b.dataset.tela;
   });
 });
-window.addEventListener("hashchange", mostrar);
+window.addEventListener("hashchange", () => { navegouNoApp = true; mostrar(); });
 
 // ---- dados ----
 function cabecalho() {
@@ -116,13 +139,13 @@ function hojeIso() {
 // busca e agrupamento da aba Ofertas: só em memória (o agrupamento escolhido também fica em radar.grupos)
 const filtrosOfertas = { busca: "" };
 function telaInicio(raiz, ctx) {
-  renderOfertas(raiz, ctx, { document, visitaAnterior, hojeIso: hojeIso(), linkProduto: Boolean(telas.produto), storage, filtros: filtrosOfertas });
+  renderOfertas(raiz, ctx, { document, visitaAnterior, hojeIso: hojeIso(), linkProduto: Boolean(telas.produto), storage, filtros: filtrosOfertas, ocultos });
 }
 
 // filtros da tela Produtos: só em memória (sobrevivem à troca de aba, somem ao reabrir o app)
 const filtrosProdutos = { busca: "", categoria: "", mercado: "" };
 function telaProdutos(raiz, ctx) {
-  renderHoje(raiz, ctx, { document, filtros: filtrosProdutos, linkProduto: Boolean(telas.produto), hojeIso: hojeIso(), storage });
+  renderHoje(raiz, ctx, { document, filtros: filtrosProdutos, linkProduto: Boolean(telas.produto), hojeIso: hojeIso(), storage, ocultos });
 }
 
 // Rede e câmera da lista por foto entram aqui; lista.js e lista_foto.js nunca chamam o fetch direto.
@@ -138,7 +161,7 @@ function telaLista(raiz, ctx) {
 }
 
 function telaProduto(raiz, ctx) {
-  renderProduto(raiz, ctx, { document });
+  renderProduto(raiz, ctx, { document, ocultos });
 }
 
 function guardarVisita() {
@@ -149,7 +172,7 @@ window.addEventListener("pagehide", guardarVisita);
 
 function telaMais(raiz, ctx) {
   renderMais(raiz, ctx, {
-    document, storage, VERSION, checkUpdate, applyUpdate, gemini, agora: new Date(),
+    document, storage, VERSION, checkUpdate, applyUpdate, gemini, agora: new Date(), ocultos,
     buscar: (url, init) => fetch(url, init),
     eventoInstalar: () => eventoInstalar,
     aoInstalar: () => { eventoInstalar = null; },

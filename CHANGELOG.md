@@ -1,5 +1,15 @@
 # Novidades do Radar
 
+## 1.2.0
+- Em Ofertas, arraste a oferta para a esquerda para pôr o produto na sua lista de compras. Um aviso confirma, com "Desfazer"
+- Cada oferta tem um "+" pequeno no canto do cartão, que faz a mesma coisa para quem não descobre o arrastar
+- Arraste a oferta para a direita, ou use "Ocultar produto" na tela do produto, para esconder um produto que você não compra. Ele some das telas e da lista só neste celular
+- Tela do produto: depois de ocultar, a tela fica 8 segundos com "Produto oculto" e volta sozinha. Dá para desfazer nesse tempo
+- Mais > Produtos ocultos: veja os produtos escondidos e toque em "Voltar a mostrar" quando quiser. São até 300
+- O número de ofertas de cada grupo aparece em um círculo amarelo, para você bater o olho
+- Os preços das ofertas estão maiores, para ler sem esforço
+- Mudou: o produto oculto não aparece em Ofertas, Produtos, Lista nem nos alertas deste celular. O Radar continua coletando e mostrando para as outras pessoas
+
 ## 1.1.0
 - A primeira aba agora se chama Ofertas e mostra todas as ofertas vigentes, em grupos por mercado ou por categoria
 - Cada grupo abre e fecha com um toque no nome. "Expandir tudo" e "Recolher tudo" ficam logo acima da lista

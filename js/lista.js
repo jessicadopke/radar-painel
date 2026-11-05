@@ -80,6 +80,11 @@ export function adicionar(lista, id) {
   return nova(lista, [...itens, { id, qtd: 1, pego: false }]);
 }
 
+// O produto já está na lista? (lista já lida por lerLista)
+export function estaNaLista(lista, id) {
+  return typeof id === "string" && itensDe(lista).some((i) => i && i.id === id);
+}
+
 export function remover(lista, id) {
   return nova(lista, itensDe(lista).filter((i) => i.id !== id));
 }

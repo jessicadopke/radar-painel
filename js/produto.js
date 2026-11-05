@@ -62,8 +62,12 @@ export function miniaturaSegura(valor) {
   return valor;
 }
 
+const ICONE_OCULTAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
+export const textoContagem = (n) => `Esta tela volta para a lista em ${n} s`;
+
 // ---- DOM ----
-// deps: { document }
+// deps: { document, ocultos (controle do #187; sem ele a tela não tem o botão de ocultar) }
+// Usa ctx.dadosCompletos (com os ocultos) quando existir: um produto oculto ainda abre, com a faixa "Produto oculto".
 export function renderProduto(raiz, ctx, deps) {
   const doc = deps.document;
   const el = (tag, props = {}, ...filhos) => {
@@ -81,8 +85,9 @@ export function renderProduto(raiz, ctx, deps) {
   const irHoje = () => el("a", { className: "botao", href: "#produtos", textContent: "Ir para Produtos" });
 
   if (ctx.estadoDados === "atualize") return vazio("Atualize o app para ver as ofertas.", el("a", { className: "botao", href: "#mais", textContent: "Ir para Mais" }));
-  if (ctx.estadoDados !== "ok" || !ctx.dados) return vazio("Ainda sem preços. Abra o app com internet uma vez.", irHoje());
-  const produto = acharProduto(ctx.dados, ctx.rota && ctx.rota.id);
+  const dados = ctx.dadosCompletos ?? ctx.dados;
+  if (ctx.estadoDados !== "ok" || !dados) return vazio("Ainda sem preços. Abra o app com internet uma vez.", irHoje());
+  const produto = acharProduto(dados, ctx.rota && ctx.rota.id);
   if (!produto) return vazio("Não achei esse produto na lista de hoje.", irHoje());
 
   const nome = String(produto.nome ?? "");
@@ -90,15 +95,19 @@ export function renderProduto(raiz, ctx, deps) {
   raiz.append(voltar, el("h2", { textContent: nome }));
   const sub = [produto.categoria ? String(produto.categoria) : "", medida ? `preço por ${medida}` : ""].filter(Boolean).join(" · ");
   if (sub) raiz.append(el("p", { className: "muted sub-produto", textContent: sub }));
+  const oc = deps.ocultos ?? null;
+  const oculto = Boolean(oc && oc.estaOculto(produto.id));
+  if (oculto) raiz.append(faixaOculto(oc, produto, el));
 
   const linhas = ofertasDoProduto(produto);
   if (!linhas.length) {
-    raiz.append(cartaoGrafico(produto, medida, ctx.dados.parametros, el, doc));
+    raiz.append(cartaoGrafico(produto, medida, dados.parametros, el, doc));
     raiz.append(el("div", { className: "cartao" }, el("p", { textContent: "Sem oferta agora em nenhum mercado." })));
+    if (oc && !oculto) raiz.append(botaoOcultar(oc, produto, nome, el));
     return;
   }
   raiz.append(heroi(linhas[0], produto, nome, medida, el));
-  raiz.append(cartaoGrafico(produto, medida, ctx.dados.parametros, el, doc));
+  raiz.append(cartaoGrafico(produto, medida, dados.parametros, el, doc));
   if (linhas.length > 1) {
     raiz.append(el("h2", { className: "titulo-sec", textContent: "Outros mercados" }));
     const lista = el("div", { className: "cartao tight" });
@@ -106,6 +115,35 @@ export function renderProduto(raiz, ctx, deps) {
     raiz.append(lista);
   }
   raiz.append(detalhes(linhas[0].oferta, nome, medida, el, doc));
+  if (oc && !oculto) raiz.append(botaoOcultar(oc, produto, nome, el));
+}
+
+// Fim da tela: o caminho sem gesto para ocultar.
+function botaoOcultar(oc, produto, nome, el) {
+  const b = el("button", { type: "button", className: "botao sec botao-ocultar" }, el("span", { className: "ico", ariaHidden: "true", innerHTML: ICONE_OCULTAR }), "Ocultar produto");
+  b.addEventListener("click", () => oc.ocultarNaTela(produto.id, nome));
+  return el("div", { className: "acoes-produto" }, b,
+    el("p", { className: "muted", textContent: "Some das ofertas, dos produtos e da lista deste celular. Dá para voltar a mostrar em Mais." }));
+}
+
+// Faixa no alto do produto oculto. Logo depois de ocultar (janela de 8 s) mostra a contagem; aberto por Mais, sem contagem.
+function faixaOculto(oc, produto, el) {
+  const j = oc.janelaDe(produto.id);
+  const frase = "Não aparece nas ofertas, nos produtos nem na lista deste celular." + (j && j.naLista ? " Também saiu da lista." : "");
+  const faixa = el("section", { className: "faixa-oculto" },
+    el("p", { className: "faixa-titulo" }, el("span", { className: "ico", ariaHidden: "true", innerHTML: ICONE_OCULTAR }), "Produto oculto"),
+    el("p", { className: "muted", textContent: frase }));
+  const voltar = el("button", { type: "button", className: "botao", textContent: "Voltar a mostrar" });
+  voltar.addEventListener("click", () => oc.mostrar(produto.id));
+  faixa.append(el("div", { className: "acoes" }, voltar));
+  if (j) {
+    // aria-hidden e sem aria-live: o leitor de tela não fala a cada segundo
+    const contagem = el("p", { className: "contagem-oculto", textContent: textoContagem(j.restante) });
+    contagem.setAttribute("aria-hidden", "true");
+    faixa.append(contagem);
+    oc.aoContar((n) => { contagem.textContent = textoContagem(n); });
+  }
+  return faixa;
 }
 
 export function textoVisto(coletadaEm) {

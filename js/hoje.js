@@ -1,6 +1,7 @@
 // Tela Produtos (arquivo ainda chamado hoje.js): lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
 import { formatarPreco } from "./inicio.js";
-import { cartaoOferta, precoDaOferta } from "./oferta.js";
+import { cartaoOferta, precoDaOferta, linhaSoOcultar, mudarOcultar, comClasse } from "./oferta.js";
+import { ativarArrastar } from "./gesto_arrastar.js";
 import { textoCondicao } from "./produto.js";
 import { agruparProdutos, desenharGrupos } from "./grupos.js";
 
@@ -78,7 +79,7 @@ export function textoEstado(diferenca, situacao) {
 }
 
 // ---- DOM ----
-// deps: { document, filtros ({busca, mercado}, alterado no lugar), linkProduto (bool), hojeIso, storage }
+// deps: { document, filtros ({busca, mercado}, alterado no lugar), linkProduto (bool), hojeIso, storage, ocultos (controle, #187) }
 export function renderHoje(raiz, ctx, deps) {
   const doc = deps.document;
   const el = (tag, props = {}, ...filhos) => {
@@ -164,7 +165,7 @@ function cartao(i, deps, el) {
   const soCondicional = o && !ehNumero(o.preco_medida);
   const porMedida = soCondicional && ehNumero(o.preco_cond_medida);
   const cond = o ? textoCondicao(o, i.medida) : "";
-  return cartaoOferta(el, {
+  const c = cartaoOferta(el, {
     pacote: !soCondicional && pc && pc.modo === "pacote" ? { preco: pc.principal, embalagem: pc.embalagem } : undefined,
     id: i.id, nome: i.nome, marca: o ? o.marca : undefined, mercado: o && o.mercado, lojas: o && o.lojas,
     preco: soCondicional ? (porMedida ? o.preco_cond_medida : o.preco_condicional) : o && o.preco_medida,
@@ -172,4 +173,13 @@ function cartao(i, deps, el) {
     situacao: i.situacao, texto: textoEstado(i.diferenca, i.situacao), link: deps.linkProduto,
     venceHoje: Boolean(i.venceHoje), selo: Boolean(i.boa), condicao: cond || undefined,
   });
+  if (!deps.ocultos || i.id == null) return c;
+  // arrastar para a direita oculta o produto (#187); aqui não há o "+" da lista, só a faixa de ocultar
+  const linha = linhaSoOcultar(el, c);
+  const id = String(i.id), nome = String(i.nome ?? "");
+  ativarArrastar(linha.partes.frente, {
+    direita: { rotulo: "Ocultar produto", acao: () => deps.ocultos.ocultarDoCartao(id, nome) },
+    aoMudar: (m) => comClasse(linha, "arrastando", mudarOcultar(linha, m)),
+  });
+  return linha;
 }

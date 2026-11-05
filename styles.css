@@ -137,6 +137,7 @@ a.oferta:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 .oferta .estado { font-size: 0.9rem; font-weight: 700; }
 .preco-et { flex: none; font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.25rem; font-variant-numeric: tabular-nums; color: var(--brand); text-align: right; white-space: nowrap; }
 .preco-et small { display: block; font: 400 0.8rem var(--fonte-texto); color: var(--muted); }
+.oferta .preco-et { font-size: 1.5rem; line-height: 1.15; }
 .preco-et.bom { background: var(--good); color: var(--on-good); padding: 4px 12px; border-radius: 14px; transform: rotate(-2deg); }
 .preco-et.bom small { color: var(--on-good); }
 .oferta.sem { background: transparent; border-style: dashed; min-height: 48px; }
@@ -379,7 +380,6 @@ a.faixa-lista small { display: block; font-weight: 400; font-size: 0.9rem; }
 a.faixa-lista b { font-family: var(--fonte-titulo); font-size: 1.25rem; font-variant-numeric: tabular-nums; }
 a.faixa-lista:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
 h2.titulo-ofertas { display: flex; align-items: center; gap: 8px; font-size: 1rem; margin: 8px 0; }
-h2.titulo-ofertas .contagem-ofertas { color: var(--muted); font-weight: 700; }
 .vazio-inicio .vazio-titulo { margin: 0 0 4px; font-family: var(--fonte-titulo); font-weight: 800; font-size: 1.05rem; }
 .vazio-inicio .botao { justify-content: center; }
 
@@ -412,7 +412,15 @@ h2.titulo-ofertas .contagem-ofertas { color: var(--muted); font-weight: 700; }
 h2.grupo-h { margin: 0; font-size: 1rem; }
 .grupo-btn { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; padding: 0; background: none; border: 0; border-radius: 8px; color: var(--fg); font: 800 1rem var(--fonte-titulo); text-align: left; cursor: pointer; }
 .grupo-btn .nome-grupo { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.grupo-btn .contagem-ofertas { margin-left: 4px; color: var(--muted); font: 400 0.9rem var(--fonte-texto); }
+/* Contagem em círculo amarelo: 1 dígito = círculo; 3 ou mais = pílula */
+.grupo-btn .contagem-ofertas,
+h2.titulo-ofertas .contagem-ofertas {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  min-width: 28px; height: 28px; padding: 0 6px; margin-left: 8px;
+  border-radius: 999px; background: var(--good); color: var(--on-good);
+  font: 800 0.9rem/1 var(--fonte-titulo); font-variant-numeric: tabular-nums; white-space: nowrap; vertical-align: middle;
+}
+h2.titulo-ofertas .contagem-ofertas { margin-left: 0; }
 .grupo-btn .ico { color: var(--brand); }
 .grupo-btn .seta { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: none; margin-right: -14px; color: var(--muted); }
 .grupo-btn .seta svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transform: rotate(-90deg); transition: transform .15s; }
@@ -421,3 +429,53 @@ h2.grupo-h { margin: 0; font-size: 1rem; }
 .grupo-painel { padding-top: 4px; }
 .grupo-painel[hidden] { display: none; }
 @media (prefers-reduced-motion: reduce) { .grupo-btn .seta svg { transition: none; } }
+
+/* Adicionar à lista arrastando a oferta (item 188). Só tokens; nenhuma regra acima muda. */
+.oferta-linha { position: relative; margin-bottom: 8px; border-radius: var(--raio); overflow: hidden; }
+.oferta-linha .oferta { margin-bottom: 0; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; -webkit-user-drag: none; }
+.oferta-linha .frente { position: relative; touch-action: pan-y; transform: translateX(calc(var(--dxo, 0px) - var(--dx, 0px))); transition: transform .18s ease-out; }
+.oferta-linha.arrastando .frente { transition: none; }
+.oferta-linha .ico { display: inline-flex; flex: none; }
+.oferta-linha .ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.acao-atras { position: absolute; top: 0; right: 0; bottom: 0; width: var(--dx, 0px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; overflow: hidden; text-align: center; background: var(--line); color: var(--brand); font: 800 0.95rem/1.15 var(--fonte-titulo); }
+.acao-atras .ico svg { width: 22px; height: 22px; stroke-width: 2.4; }
+.oferta-linha.passou .acao-atras { background: var(--brand); color: var(--on-brand); }
+.oferta-linha.ja .acao-atras { background: var(--line); color: var(--fg); }
+.btn-lista { position: absolute; top: 0; right: 0; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; background: transparent; border: 0; color: var(--brand); cursor: pointer; }
+.btn-lista .ico { width: 28px; height: 28px; align-items: center; justify-content: center; border: 2px solid var(--brand); border-radius: 50%; }
+.btn-lista .ico svg { width: 16px; height: 16px; stroke-width: 2.6; }
+.btn-lista:active .ico { background: var(--line); }
+.btn-lista:focus-visible { outline: 3px solid var(--brand); outline-offset: -3px; border-radius: 50%; }
+.btn-lista[aria-disabled="true"] { cursor: default; }
+.btn-lista[aria-disabled="true"] .ico { background: var(--brand); color: var(--on-brand); }
+.oferta-linha .oferta .preco-et { margin-top: 14px; }
+.aviso-lista { position: fixed; left: 16px; right: 16px; bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 5; max-width: 608px; margin: 0 auto; display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 6px 8px 6px 16px; background: var(--fg); color: var(--bg); border-radius: var(--raio); font-weight: 700; animation: sobe .18s ease-out; }
+.aviso-lista span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.aviso-lista button { flex: none; min-width: 44px; min-height: 44px; padding: 0 16px; background: transparent; color: var(--bg); border: 2px solid var(--bg); border-radius: 999px; font: 700 0.95rem var(--fonte-texto); cursor: pointer; }
+.aviso-lista button:focus-visible { outline: 3px solid var(--bg); outline-offset: 2px; }
+@keyframes sobe { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .oferta-linha .frente, .aviso-lista { transition: none; animation: none; } }
+
+/* Ocultar produto (item 187). Só tokens. Faixa à esquerda, atrás do cartão, ao arrastar para a direita */
+.acao-ocultar { position: absolute; top: 0; left: 0; bottom: 0; width: var(--dxo, 0px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; overflow: hidden; text-align: center; background: var(--line); color: var(--fg); font: 800 0.95rem/1.15 var(--fonte-titulo); }
+.acao-ocultar .ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.oferta-linha.oc-passou .acao-ocultar { background: var(--fg); color: var(--bg); }
+.oferta-linha.so-ocultar .oferta .preco-et { margin-top: 0; }
+.acoes-produto { margin-top: 16px; }
+.acoes-produto .botao-ocultar { display: inline-flex; align-items: center; gap: 8px; }
+.acoes-produto .muted { margin-top: 8px; }
+.botao .ico { display: inline-flex; flex: none; }
+.botao .ico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.faixa-oculto { padding: 16px; margin-bottom: 12px; background: var(--line); color: var(--fg); border-radius: var(--raio); }
+.faixa-oculto .faixa-titulo { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font: 800 1.15rem var(--fonte-titulo); }
+.faixa-oculto .faixa-titulo .ico svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.faixa-oculto .muted { color: var(--fg); }
+.faixa-oculto .contagem-oculto { margin: 8px 0 0; font-size: 0.9rem; color: var(--fg); }
+.tela-ocultos h2 { font: 800 1.3rem var(--fonte-titulo); margin: 4px 0 4px; }
+.tela-ocultos .sub-ocultos { margin-bottom: 12px; }
+.tela-ocultos .linha-oculto { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.tela-ocultos .linha-oculto:last-child { border-bottom: 0; }
+.tela-ocultos .texto-oculto { flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; }
+.tela-ocultos .nome-oculto { margin: 0; font-weight: 700; }
+.tela-ocultos .linha-oculto .botao { flex: none; }
+.tela-ocultos .vazio-titulo, .tela-ocultos .confirma-titulo { font: 800 1.05rem var(--fonte-titulo); }

@@ -38,9 +38,86 @@ export function cartaoOferta(el, d) {
       : el("span", { className: classeEt }, formatarPreco(d.preco),
         ...(d.medida ? [el("small", { textContent: `por ${d.medida}` })] : []));
   const classe = "oferta" + (semOferta ? " sem" : "") + (pacote ? " pacote" : "");
-  return d.link && d.id != null
+  const cartao = d.link && d.id != null
     ? el("a", { className: classe, href: "#produto/" + encodeURIComponent(d.id) }, meio, lado)
     : el("div", { className: classe }, meio, lado);
+  // Sem aoAdicionar o cartão sai como sempre. Com ele (aba Ofertas, #188): contêiner com o cartão e o botão lado a lado
+  // (botão dentro de <a> é inválido) e a faixa que aparece atrás ao arrastar.
+  if (typeof d.aoAdicionar !== "function" || semOferta) return cartao;
+  return linhaComLista(el, cartao, d);
+}
+
+// ---- adicionar à lista (#188) ----
+const ICONE_LISTA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M4 12h10M4 18h6M18 14v8M14 18h8"/></svg>';
+const ICONE_ADD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+const ICONE_OK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>';
+
+// Liga/desliga uma classe sem depender de classList.
+export function comClasse(no, classe, ligada) {
+  const atuais = String(no.className ?? "").split(" ").filter(Boolean).filter((c) => c !== classe);
+  no.className = (ligada ? [...atuais, classe] : atuais).join(" ");
+}
+
+// Estado "Na lista" do botão (e da linha). `linha.partes` vem de linhaComLista.
+export function marcarNaLista(linha, naLista, nome) {
+  const p = linha && linha.partes;
+  if (!p) return;
+  comClasse(linha, "ja", naLista);
+  const n = String(nome ?? "");
+  p.icone.innerHTML = naLista ? ICONE_OK : ICONE_ADD;
+  p.botao.setAttribute("aria-label", naLista ? `${n} já está na lista` : `Adicionar ${n} à lista`);
+  if (naLista) p.botao.setAttribute("aria-disabled", "true");
+  else if (typeof p.botao.removeAttribute === "function") p.botao.removeAttribute("aria-disabled");
+  else p.botao.setAttribute("aria-disabled", "false");
+}
+
+// ---- ocultar produto (#187): faixa à esquerda, revelada ao arrastar o cartão para a direita ----
+const ICONE_OCULTAR = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
+const emPx = (n) => `${Math.round(Number.isFinite(n) ? n : 0)}px`;
+
+function faixaOcultar(el) {
+  const textoOcultar = el("span", { className: "texto-faixa", textContent: "Ocultar produto" });
+  const faixaOc = el("span", { className: "acao-ocultar", ariaHidden: "true" }, el("span", { className: "ico", ariaHidden: "true", innerHTML: ICONE_OCULTAR }), textoOcultar);
+  return { faixaOc, textoOcultar };
+}
+
+// Cartão de Produtos: a mesma linha, só com a faixa de ocultar (sem o botão "+").
+export function linhaSoOcultar(el, cartao) {
+  const { faixaOc, textoOcultar } = faixaOcultar(el);
+  const frente = el("div", { className: "frente" }, cartao);
+  const linha = el("div", { className: "oferta-linha so-ocultar" }, faixaOc, frente);
+  linha.partes = { frente, faixaOc, textoOcultar };
+  return linha;
+}
+
+// Desenha o arrasto para a direita (aoMudar do gesto). Devolve true quando é o lado de ocultar;
+// nesse caso quem chamou não mexe em --dx. Qualquer outro lado (ou soltar) apaga a faixa.
+export function mudarOcultar(linha, { lado, deslocamento, passou, arrastando } = {}) {
+  const dir = Boolean(arrastando) && lado === "direita";
+  comClasse(linha, "oc-ativo", dir);
+  comClasse(linha, "oc-passou", dir && Boolean(passou));
+  const p = linha.partes;
+  if (p && p.textoOcultar) p.textoOcultar.textContent = dir && passou ? "Solte para ocultar" : "Ocultar produto";
+  if (linha.style && typeof linha.style.setProperty === "function") linha.style.setProperty("--dxo", dir ? emPx(deslocamento) : "0px");
+  return dir;
+}
+
+function linhaComLista(el, cartao, d) {
+  const icone = el("span", { className: "ico", ariaHidden: "true", innerHTML: ICONE_ADD });
+  const botao = el("button", { type: "button", className: "btn-lista" }, icone);
+  botao.addEventListener("click", (e) => {
+    try { e.preventDefault(); e.stopPropagation(); } catch {}
+    d.aoAdicionar();
+  });
+  const iconeFaixa = el("span", { className: "ico", ariaHidden: "true", innerHTML: ICONE_LISTA });
+  const textoFaixa = el("span", { className: "texto-faixa", textContent: "Adicionar à lista" });
+  const faixa = el("span", { className: "acao-atras", ariaHidden: "true" }, iconeFaixa, textoFaixa);
+  const frente = el("div", { className: "frente" }, cartao, botao);
+  const { faixaOc, textoOcultar } = faixaOcultar(el);
+  const linha = el("div", { className: "oferta-linha" }, faixaOc, faixa, frente);
+  linha.partes = { frente, faixa, textoFaixa, botao, icone, faixaOc, textoOcultar };
+  marcarNaLista(linha, Boolean(d.naLista), d.nome);
+  return linha;
 }
 
 // ---- preço do pacote (#127) ----

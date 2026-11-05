@@ -1,13 +1,15 @@
 // Tela Mais: cartão de linhas (versão, tema, chave do Gemini, instalar) e três blocos que abrem e fecham
 // (Situação da coleta, Como funciona, Novidades). Nenhuma função lança exceção.
 // deps: { document, storage, VERSION, checkUpdate(), applyUpdate(), eventoInstalar() -> evento|null, instalado(),
-//         agora: Date, buscar(url, init), gemini }. Usa só o que o dados.json traz em "coleta" (sem mensagem de erro, sem caminhos).
+//         agora: Date, buscar(url, init), gemini, ocultos (controle do #187) }. Usa só o que o dados.json traz em "coleta" (sem mensagem de erro, sem caminhos).
 import { EXPLICACAO, NOME_TEMA, lerTema, gravarTema, proximoTema, lerChangelog, versaoAtual } from "./sobre.js";
 import { fontesParaTela, linhaFonte, coletaPrecisaAtencao } from "./coleta.js";
 import { situacaoFrescor } from "./frescor.js";
 import { renderListaFoto } from "./lista_foto.js";
+import { renderOcultos } from "./ocultos_tela.js";
 
 export function renderMais(raiz, ctx, deps) {
+  if (deps.ocultos && ctx.rota && ctx.rota.sub === "ocultos") return renderOcultos(raiz, ctx, deps);
   const doc = deps.document;
   const el = (tag, props = {}, ...filhos) => {
     const e = doc.createElement(tag);
@@ -72,6 +74,13 @@ export function renderMais(raiz, ctx, deps) {
   if (abrirChave) {
     const abrir = botao("Abrir", () => abrirChave.abrirChave(abrir), "Abrir a chave do Gemini");
     cartao.append(linha("Chave do Gemini", apoioTexto("Para ler a lista por foto"), abrir));
+  }
+
+  // ---- produtos ocultos (#187) ----
+  if (deps.ocultos) {
+    const n = deps.ocultos.contar();
+    const ver = botao("Ver", () => deps.ocultos.irPara("#mais/ocultos"), "Ver produtos ocultos");
+    cartao.append(linha("Produtos ocultos", apoioTexto(n === 0 ? "Nenhum por enquanto" : n === 1 ? "1 produto escondido" : `${n} produtos escondidos`), ver));
   }
 
   // ---- instalar: só se o navegador ofereceu ----
