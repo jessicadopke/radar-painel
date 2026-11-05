@@ -65,10 +65,8 @@ export function marcarNaLista(linha, naLista, nome) {
   comClasse(linha, "ja", naLista);
   const n = String(nome ?? "");
   p.icone.innerHTML = naLista ? ICONE_OK : ICONE_ADD;
-  p.botao.setAttribute("aria-label", naLista ? `${n} já está na lista` : `Adicionar ${n} à lista`);
-  if (naLista) p.botao.setAttribute("aria-disabled", "true");
-  else if (typeof p.botao.removeAttribute === "function") p.botao.removeAttribute("aria-disabled");
-  else p.botao.setAttribute("aria-disabled", "false");
+  p.botao.setAttribute("aria-label", naLista ? `Tirar ${n} da lista` : `Adicionar ${n} à lista`);
+  if (typeof p.botao.removeAttribute === "function") p.botao.removeAttribute("aria-disabled");
 }
 
 // ---- ocultar produto (#187): faixa à esquerda, revelada ao arrastar o cartão para a direita ----

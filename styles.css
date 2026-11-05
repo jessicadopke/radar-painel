@@ -441,14 +441,15 @@ h2.titulo-ofertas .contagem-ofertas { margin-left: 0; }
 .acao-atras .ico svg { width: 22px; height: 22px; stroke-width: 2.4; }
 .oferta-linha.passou .acao-atras { background: var(--brand); color: var(--on-brand); }
 .oferta-linha.ja .acao-atras { background: var(--line); color: var(--fg); }
-.btn-lista { position: absolute; top: 0; right: 0; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; background: transparent; border: 0; color: var(--brand); cursor: pointer; }
-.btn-lista .ico { width: 28px; height: 28px; align-items: center; justify-content: center; border: 2px solid var(--brand); border-radius: 50%; }
-.btn-lista .ico svg { width: 16px; height: 16px; stroke-width: 2.6; }
+.btn-lista { position: absolute; top: 0; right: 0; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; background: transparent; border: 0; color: var(--brand); cursor: pointer; }
+.btn-lista .ico { width: 20px; height: 20px; align-items: center; justify-content: center; border: 1.5px solid var(--brand); border-radius: 50%; }
+.btn-lista .ico svg { width: 11px; height: 11px; stroke-width: 3; }
 .btn-lista:active .ico { background: var(--line); }
-.btn-lista:focus-visible { outline: 3px solid var(--brand); outline-offset: -3px; border-radius: 50%; }
+.btn-lista:focus-visible { outline: none; }
+.btn-lista:focus-visible .ico { outline: 2px solid var(--brand); outline-offset: 2px; }
 .btn-lista[aria-disabled="true"] { cursor: default; }
 .btn-lista[aria-disabled="true"] .ico { background: var(--brand); color: var(--on-brand); }
-.oferta-linha .oferta .preco-et { margin-top: 14px; }
+.oferta-linha:not(.so-ocultar) .oferta .preco-et { margin-right: 20px; }
 .aviso-lista { position: fixed; left: 16px; right: 16px; bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 5; max-width: 608px; margin: 0 auto; display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 6px 8px 6px 16px; background: var(--fg); color: var(--bg); border-radius: var(--raio); font-weight: 700; animation: sobe .18s ease-out; }
 .aviso-lista span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .aviso-lista button { flex: none; min-width: 44px; min-height: 44px; padding: 0 16px; background: transparent; color: var(--bg); border: 2px solid var(--bg); border-radius: 999px; font: 700 0.95rem var(--fonte-texto); cursor: pointer; }
@@ -460,7 +461,6 @@ h2.titulo-ofertas .contagem-ofertas { margin-left: 0; }
 .acao-ocultar { position: absolute; top: 0; left: 0; bottom: 0; width: var(--dxo, 0px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0 8px; overflow: hidden; text-align: center; background: var(--line); color: var(--fg); font: 800 0.95rem/1.15 var(--fonte-titulo); }
 .acao-ocultar .ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .oferta-linha.oc-passou .acao-ocultar { background: var(--fg); color: var(--bg); }
-.oferta-linha.so-ocultar .oferta .preco-et { margin-top: 0; }
 .acoes-produto { margin-top: 16px; }
 .acoes-produto .botao-ocultar { display: inline-flex; align-items: center; gap: 8px; }
 .acoes-produto .muted { margin-top: 8px; }

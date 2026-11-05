@@ -1,5 +1,10 @@
 # Novidades do Radar
 
+## 1.3.0
+- Em Ofertas, o botão "Na lista" do cartão vira "Tirar da lista" quando o produto já está na sua lista. Um toque tira o item, com aviso e "Desfazer" para voltar do mesmo jeito
+- Mudou: os outros cartões do mesmo produto voltam ao "+" depois que você tira o item da lista
+- Corrigido: nos cartões curtos da aba Ofertas, o preço ficava encostado no botão "+". Agora ele fica afastado, com folga para ler
+
 ## 1.2.0
 - Em Ofertas, arraste a oferta para a esquerda para pôr o produto na sua lista de compras. Um aviso confirma, com "Desfazer"
 - Cada oferta tem um "+" pequeno no canto do cartão, que faz a mesma coisa para quem não descobre o arrastar

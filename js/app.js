@@ -11,7 +11,7 @@ import { renderOfertas } from "./ofertas.js";
 import { lerOcultos, filtrarDados } from "./ocultos.js";
 import { criarControle } from "./controle_ocultos.js";
 
-const VERSION = "1.2.0";
+const VERSION = "1.3.0";
 const PREFIXO_CACHE = "radar-";
 
 const $tela = document.getElementById("tela");

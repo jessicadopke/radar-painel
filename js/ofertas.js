@@ -145,6 +145,23 @@ export function renderOfertas(raiz, ctx, deps) {
       atualizarProduto(id, nome);
     });
   }
+  // Toque em "Na lista" (#193): tira o produto; o Desfazer devolve o mesmo item (mesma quantidade) na mesma posição.
+  function tirarProduto(id, nome) {
+    const antes = lerLista(deps.storage);
+    const itens = Array.isArray(antes.itens) ? antes.itens : [];
+    const pos = itens.findIndex((i) => i && i.id === id);
+    if (pos < 0) { atualizarProduto(id, nome); return; }
+    const item = itens[pos];
+    if (!gravarLista(deps.storage, remover(antes, id))) { avisar("Não foi possível guardar na lista. Tente de novo."); return; }
+    atualizarProduto(id, nome);
+    avisar("Tirado da lista", () => {
+      const atual = lerLista(deps.storage);
+      const resto = Array.isArray(atual.itens) ? atual.itens.filter((i) => i && i.id !== id) : [];
+      resto.splice(Math.min(pos, resto.length), 0, item);
+      gravarLista(deps.storage, { ...atual, itens: resto });
+      atualizarProduto(id, nome);
+    });
+  }
   function ligarGesto(linha, id, nome) {
     const mudar = (m) => {
       const { deslocamento, passou, arrastando } = m;
@@ -171,7 +188,7 @@ export function renderOfertas(raiz, ctx, deps) {
     const d = dadosDoCartao(item, { hoje: deps.hojeIso, novas, linkProduto: deps.linkProduto });
     if (!deps.storage) return cartaoOferta(e, d);
     const id = String(d.id);
-    const c = cartaoOferta(e, { ...d, naLista: estaNaLista(lerLista(deps.storage), id), aoAdicionar: () => adicionarProduto(id, d.nome) });
+    const c = cartaoOferta(e, { ...d, naLista: estaNaLista(lerLista(deps.storage), id), aoAdicionar: () => (estaNaLista(lerLista(deps.storage), id) ? tirarProduto(id, d.nome) : adicionarProduto(id, d.nome)) });
     if (c.partes) {
       linhas.set(id, [...(linhas.get(id) ?? []), c]);
       textoDaFaixa(c, false);
