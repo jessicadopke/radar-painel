@@ -1,5 +1,15 @@
 # Novidades do Radar
 
+## 1.4.0
+- Concluir compra: ao terminar as compras, toque em "Concluir compra" na aba Lista. Você revisa o que pegou e o que sobrou, e a compra vai para o Histórico, na própria aba Lista. Lá você vê cada compra em detalhe, apaga a que não quer mais e refaz uma lista antiga com um toque
+- Você costuma comprar: a aba Lista sugere os produtos que aparecem em pelo menos 3 compras dos últimos 90 dias e ainda não estão na sua lista. Um toque põe o produto na lista
+- Você pode ter mais de uma lista, cada uma com nome e data. Crie, renomeie, troque a data e apague a lista que não usa mais, e troque de lista quando quiser
+- A lista que você já tinha vira "Minha lista", com os mesmos itens, quantidades e marcações. Nada se perde na atualização
+- Mudou: o produto de ovos aparece só como "Ovos", sem "(preço por ovo)" no nome. A embalagem e o preço por ovo continuam na oferta
+- Mudou: a chave do Gemini não aparece mais na tela Lista. Ela continua em Mais, onde você a informa, troca ou remove
+- Corrigido: na aba Produtos, as linhas sem oferta agora não mostram mais a faixa de ocultar cortada ao lado do nome
+- Corrigido: na aba Ofertas, o ✓ de "já na lista" é um círculo preenchido, com cor diferente do "+"
+
 ## 1.3.0
 - Em Ofertas, o botão "Na lista" do cartão vira "Tirar da lista" quando o produto já está na sua lista. Um toque tira o item, com aviso e "Desfazer" para voltar do mesmo jeito
 - Mudou: os outros cartões do mesmo produto voltam ao "+" depois que você tira o item da lista

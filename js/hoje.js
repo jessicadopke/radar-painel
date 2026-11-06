@@ -1,14 +1,12 @@
 // Tela Produtos (arquivo ainda chamado hoje.js): lógica pura (sem DOM) + montagem da tela. Nenhuma função lança exceção.
+import { normalizar } from "./texto.js";
 import { formatarPreco } from "./inicio.js";
 import { cartaoOferta, precoDaOferta, linhaSoOcultar, mudarOcultar, comClasse } from "./oferta.js";
 import { ativarArrastar } from "./gesto_arrastar.js";
 import { textoCondicao } from "./produto.js";
 import { agruparProdutos, desenharGrupos } from "./grupos.js";
 
-export function normalizar(texto) {
-  if (texto == null) return "";
-  return String(texto).normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
-}
+export { normalizar };
 
 const ehNumero = (n) => typeof n === "number" && Number.isFinite(n);
 const listaDe = (x) => (Array.isArray(x) ? x : []);

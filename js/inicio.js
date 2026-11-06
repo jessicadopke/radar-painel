@@ -2,7 +2,7 @@
 
 import { cartaoOferta, precoDaOferta, ofertaDoAlerta } from "./oferta.js";
 import { situacaoDe, textoEstado } from "./hoje.js";
-import { lerLista, resumoDaLista, centavosParaTexto } from "./lista.js";
+import { lerLista, resumoDaLista } from "./lista.js";
 
 export const CHAVE_VISTO = "radar-visto-ate";
 const TIPOS = ["menor_periodo", "preco_bom"];
@@ -20,6 +20,8 @@ export function formatarPreco(n) {
   if (typeof n !== "number" || !Number.isFinite(n)) return "—";
   return "R$ " + n.toFixed(2).replace(".", ",");
 }
+
+export const centavosParaTexto = (c) => formatarPreco(c / 100);
 
 export function formatarValidade(validadeFim, hojeIso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(validadeFim ?? ""));

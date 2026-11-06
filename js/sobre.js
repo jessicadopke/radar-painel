@@ -8,7 +8,7 @@ export const EXPLICACAO = [
   "O Radar junta as ofertas do Assaí e do Atacadão de Palmas.",
   "A leitura é automática e pode errar. Confira o preço na loja.",
   "Os preços são atualizados 2 vezes por dia. Sem internet, você vê a última cópia.",
-  "Sua lista e seus alertas ficam só neste celular.",
+  "Suas listas, suas compras e seus alertas ficam só neste celular.",
   "O melhor mercado é o de menor preço por kg/un; o total soma o preço da embalagem.",
 ];
 

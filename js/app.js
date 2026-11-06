@@ -1,7 +1,7 @@
 import { newerThan } from "./versao.js";
 import { carregarDados } from "./dados.js";
 import { renderHoje } from "./hoje.js";
-import { renderLista } from "./lista.js";
+import { renderLista } from "./lista_tela.js";
 import { atualizarChip } from "./frescor.js";
 import { renderMais } from "./mais.js";
 import { renderProduto } from "./produto.js";
@@ -11,7 +11,7 @@ import { renderOfertas } from "./ofertas.js";
 import { lerOcultos, filtrarDados } from "./ocultos.js";
 import { criarControle } from "./controle_ocultos.js";
 
-const VERSION = "1.3.0";
+const VERSION = "1.4.0";
 const PREFIXO_CACHE = "radar-";
 
 const $tela = document.getElementById("tela");
@@ -20,6 +20,7 @@ const $avisoVelho = document.getElementById("aviso-velho");
 
 let dados = null;
 let estadoDados = "sem-dados";
+let carregando = true; // o dados.json ainda não respondeu (nem certo nem errado)
 let eventoInstalar = null;
 let registro = null;
 // visita anterior lida uma vez ao abrir; só é gravada ao sair (assim os "Novo" não somem na sessão)
@@ -60,7 +61,7 @@ function mostrar(opcoes) {
   if (r.tela === "produto" && !manter) window.scrollTo(0, 0);
   // filtro único dos produtos ocultos: todas as telas recebem ctx.dados já filtrado; a tela Produto e a de ocultos usam dadosCompletos
   const estadoOcultos = lerOcultos(storage);
-  telas[r.tela]($tela, { dados: filtrarDados(dados, estadoOcultos), dadosCompletos: dados, estadoDados, rota: r, ocultos: estadoOcultos });
+  telas[r.tela]($tela, { dados: filtrarDados(dados, estadoOcultos), dadosCompletos: dados, estadoDados, carregando, rota: r, ocultos: estadoOcultos });
   if (manter) window.scrollTo(0, y);
   document.querySelectorAll(".abas button").forEach((b) => {
     if (b.dataset.tela === r.aba) b.setAttribute("aria-current", "page");
@@ -104,6 +105,7 @@ async function iniciarDados() {
   const r = await carregarDados();
   dados = r.dados;
   estadoDados = r.estado;
+  carregando = false;
   cabecalho();
   mostrar();
 }
@@ -148,7 +150,7 @@ function telaProdutos(raiz, ctx) {
   renderHoje(raiz, ctx, { document, filtros: filtrosProdutos, linkProduto: Boolean(telas.produto), hojeIso: hojeIso(), storage, ocultos });
 }
 
-// Rede e câmera da lista por foto entram aqui; lista.js e lista_foto.js nunca chamam o fetch direto.
+// Rede e câmera da lista por foto entram aqui; lista.js, lista_tela.js e lista_foto.js nunca chamam o fetch direto.
 const gemini = {
   buscar: (url, init) => fetch(url, init),
   criarBitmap: typeof createImageBitmap === "function" ? (arquivo, opcoes) => createImageBitmap(arquivo, opcoes) : null,
@@ -157,7 +159,11 @@ const gemini = {
 };
 
 function telaLista(raiz, ctx) {
-  renderLista(raiz, ctx, { document, storage, window, gemini });
+  renderLista(raiz, ctx, {
+    document, storage, window, gemini, hojeIso: hojeIso(), ocultos, agora: new Date(),
+    irPara: (hash) => { location.hash = hash; },
+    offline: () => navigator.onLine === false,
+  });
 }
 
 function telaProduto(raiz, ctx) {

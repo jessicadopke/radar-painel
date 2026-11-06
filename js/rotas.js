@@ -14,6 +14,9 @@ export function rota(hash) {
   if (nome === "produto") {
     return resto[0] ? { tela: "produto", aba: "produtos", id: decodificar(resto[0]) } : { tela: "produtos", aba: "produtos" };
   }
+  if (nome === "lista" && resto[0] === "historico") return { tela: "lista", aba: "lista", sub: "historico" }; // Lista > Histórico (#194)
+  if (nome === "lista" && resto[0] === "concluir") return { tela: "lista", aba: "lista", sub: "concluir" };
+  if (nome === "lista" && resto[0] === "compra" && resto[1]) return { tela: "lista", aba: "lista", sub: "compra", id: decodificar(resto[1]) };
   const destino = Object.hasOwn(APELIDOS, nome) ? APELIDOS[nome] : nome;
   if (destino === "mais" && resto[0] === "ocultos") return { tela: "mais", aba: "mais", sub: "ocultos" }; // Mais > Produtos ocultos (#187)
   return ABAS.includes(destino) ? { tela: destino, aba: destino } : { tela: "inicio", aba: "inicio" };
